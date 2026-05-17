@@ -239,6 +239,12 @@ tr:hover td{background:#fafafa}
             <select id="in-proyek" onchange="onProyekChange()"><option value="">-- Pilih Proyek --</option></select>
           </div>
           <div class="form-group mb-12">
+            <label>Mandor</label>
+            <select id="in-mandor">
+              <option value="">-- Pilih Mandor --</option>
+            </select>
+          </div>
+          <div class="form-group mb-12">
             <label>Pekerja</label>
             <select id="in-pekerja" onchange="onPekerjaChange()"><option value="">-- Pilih Pekerja --</option></select>
           </div>
@@ -932,6 +938,13 @@ function initInputAbsensi() {
   hitungJam(); renderAbsensiHariIni();
 }
 function onProyekChange() {
+  const proyekId=document.getElementById('in-proyek').value;
+  const pr=DB.proyek.find(p=>p.id===proyekId);
+  // Isi dropdown mandor — semua mandor tersedia, default ke mandor proyek
+  const selMn=document.getElementById('in-mandor');
+  selMn.innerHTML='<option value="">-- Pilih Mandor --</option>'+DB.mandor.map(m=>`<option value="${m.id}">${m.nama}</option>`).join('');
+  if(pr?.mandorId) selMn.value=pr.mandorId;
+  // Isi pekerja
   document.getElementById('in-pekerja').innerHTML='<option value="">-- Pilih Pekerja --</option>'+DB.pekerja.map(p=>`<option value="${p.id}">${p.nama} (${p.jabatan})</option>`).join('');
   document.getElementById('info-pekerja').style.display='none';
   document.getElementById('week-preview-wrap').style.display='none';
@@ -1006,18 +1019,18 @@ function hitungJam() {
 }
 function simpanAbsensi() {
   const proyekId=document.getElementById('in-proyek').value;
+  const mandorId=document.getElementById('in-mandor').value;
   const pekerjaId=document.getElementById('in-pekerja').value;
   const tanggal=document.getElementById('in-tanggal').value;
   const masuk=document.getElementById('in-masuk').value;
   const pulang=document.getElementById('in-pulang').value;
   const deskripsi=document.getElementById('in-deskripsi').value;
   const el=document.getElementById('alert-absensi');
-  if(!proyekId||!pekerjaId||!tanggal||!masuk||!pulang){showAlert(el,'error','Lengkapi semua field!');return;}
+  if(!proyekId||!mandorId||!pekerjaId||!tanggal||!masuk||!pulang){showAlert(el,'error','Lengkapi semua field termasuk Mandor!');return;}
   if(DB.absensi.find(a=>a.pekerjaId===pekerjaId&&a.tanggal===tanggal&&a.proyekId===proyekId)){showAlert(el,'error','Absensi ini sudah ada!');return;}
   const pk=DB.pekerja.find(p=>p.id===pekerjaId);
   const {hariKerja,lemburJam,total,durMenit}=hitungAbsensi(masuk,pulang,pk?.upah,pk?.lembur);
-  // Revisi 3: simpan media langsung di record absensi
-  DB.absensi.push({id:uid(),proyekId,pekerjaId,tanggal,masuk,pulang,durMenit,hariKerja,lemburJam,
+  DB.absensi.push({id:uid(),proyekId,mandorId,pekerjaId,tanggal,masuk,pulang,durMenit,hariKerja,lemburJam,
     upahHarian:pk?.upah||0,upahLembur:pk?.lembur||0,total,deskripsi,
     media:[...mediaFilesAbsen],
     status:'pending',catatanReject:'',catatanEditJam:'',createdAt:new Date().toISOString()});
@@ -1207,58 +1220,112 @@ function renderRekap() {
   const sampai=document.getElementById('rek-sampai').value;
   const weeks=getWeeksInRange(dari,sampai);
   let html='';
+  let grandTotal=0,grandHari=0;
+
   weeks.forEach(week=>{
     const wData=data.filter(a=>a.tanggal>=week.start&&a.tanggal<=week.end);
     if(!wData.length)return;
-    const grouped={};
-    wData.forEach(a=>{if(!grouped[a.pekerjaId])grouped[a.pekerjaId]=[];grouped[a.pekerjaId].push(a);});
+
+    // Group by mandor first, then by pekerja
+    const byMandor={};
+    wData.forEach(a=>{
+      const mnId=a.mandorId||'_tanpa_mandor';
+      if(!byMandor[mnId])byMandor[mnId]=[];
+      byMandor[mnId].push(a);
+    });
+
     html+=`<div class="rekap-week-block">
-      <div class="rekap-week-header">📅 ${formatTgl(week.start)} – ${formatTgl(week.end)}</div>
+      <div class="rekap-week-header">📅 ${formatTgl(week.start)} – ${formatTgl(week.end)}</div>`;
+
+    let wGrandTotal=0,wGrandHari=0;
+
+    Object.entries(byMandor).forEach(([mnId,mnRecs])=>{
+      const mn=DB.mandor.find(m=>m.id===mnId)||{nama:'(Tidak ada Mandor)',rekening:'-',hp:'-'};
+      // Sub-group by pekerja
+      const byPekerja={};
+      mnRecs.forEach(a=>{if(!byPekerja[a.pekerjaId])byPekerja[a.pekerjaId]=[];byPekerja[a.pekerjaId].push(a);});
+      let mTotal=0,mHari=0,no=1;
+
+      // Header mandor
+      html+=`<div style="background:#1a1a1a;color:#fff;padding:8px 14px;font-size:12px;font-weight:700;display:flex;justify-content:space-between;align-items:center;border-top:3px solid var(--gold)">
+        <span>🦺 Mandor: ${mn.nama}</span>
+        <span style="font-size:11px;font-weight:400;color:#ccc">Rekening: ${mn.rekening||'-'} · HP: ${mn.hp||'-'}</span>
+      </div>
       <div class="table-wrap"><table>
         <thead><tr><th>No</th><th>Nama Pekerja</th><th>Jabatan</th>
         ${[0,1,2,3,4,5,6].map(i=>{
           const parts=week.start.split('-').map(Number);
           const d=new Date(parts[0],parts[1]-1,parts[2]+i);
-          return `<th style="font-size:10px">${HARI_PENDEK[i]}<br><span style="font-weight:400">${d.getDate()}</span></th>`;
+          return`<th style="font-size:10px">${HARI_PENDEK[i]}<br><span style="font-weight:400">${d.getDate()}</span></th>`;
         }).join('')}
-        <th>∑Hari</th><th>Lembur</th><th>Upah</th><th>+Lembur</th><th>Total</th></tr></thead>
-        <tbody>`;
-    let gHari=0,gBayar=0,no=1;
-    Object.entries(grouped).forEach(([pkId,recs])=>{
-      const pk=DB.pekerja.find(p=>p.id===pkId)||{nama:'?',jabatan:'?',upah:0,lembur:0};
-      const tH=recs.reduce((s,a)=>s+a.hariKerja,0);
-      const tL=recs.reduce((s,a)=>s+a.lemburJam,0);
-      const tB=recs.reduce((s,a)=>s+a.total,0);
-      gHari+=tH;gBayar+=tB;
-      const cols=[0,1,2,3,4,5,6].map(i=>{
-        const parts=week.start.split('-').map(Number);
-        const d=new Date(parts[0],parts[1]-1,parts[2]+i);
-        const tgl=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        const a=recs.find(r=>r.tanggal===tgl);
-        if(!a)return`<td style="color:#e0e0e0;text-align:center">–</td>`;
-        const dot=a.status==='approved'?'✅':a.status==='rejected'?'❌':'⏳';
-        return`<td style="font-size:11px;text-align:center" title="${a.masuk}–${a.pulang}">${dot}<br><span style="color:#666">${a.hariKerja}h</span></td>`;
-      }).join('');
-      html+=`<tr><td style="text-align:center">${no++}</td><td><strong>${pk.nama}</strong></td><td class="text-sm text-gray">${pk.jabatan}</td>${cols}
-        <td style="text-align:center;font-weight:600">${tH}</td>
-        <td style="text-align:center">${tL.toFixed(1)}</td>
-        <td style="text-align:right">${rupiah(tH*pk.upah)}</td>
-        <td style="text-align:right">${rupiah(tL*pk.lembur)}</td>
-        <td style="text-align:right;font-weight:700;color:var(--red)">${rupiah(tB)}</td></tr>`;
+        <th>∑Hari</th><th>Lembur</th><th>Upah</th><th>+Lembur</th><th>Total</th><th style="min-width:160px">Deskripsi Pekerjaan</th>
+        </tr></thead><tbody>`;
+
+      Object.entries(byPekerja).forEach(([pkId,recs])=>{
+        const pk=DB.pekerja.find(p=>p.id===pkId)||{nama:'?',jabatan:'?',upah:0,lembur:0};
+        const tH=recs.reduce((s,a)=>s+a.hariKerja,0);
+        const tL=recs.reduce((s,a)=>s+a.lemburJam,0);
+        const tB=recs.reduce((s,a)=>s+a.total,0);
+        mTotal+=tB;mHari+=tH;
+
+        const cols=[0,1,2,3,4,5,6].map(i=>{
+          const parts=week.start.split('-').map(Number);
+          const d=new Date(parts[0],parts[1]-1,parts[2]+i);
+          const tgl=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+          const a=recs.find(r=>r.tanggal===tgl);
+          if(!a)return`<td style="color:#e0e0e0;text-align:center">–</td>`;
+          const dot=a.status==='approved'?'✅':a.status==='rejected'?'❌':'⏳';
+          return`<td style="font-size:11px;text-align:center" title="${a.masuk}–${a.pulang}">${dot}<br><span style="color:#666">${a.hariKerja}h</span></td>`;
+        }).join('');
+
+        // Deskripsi sebagai list per tanggal
+        const deskList=recs
+          .filter(a=>a.deskripsi)
+          .sort((a,b)=>a.tanggal.localeCompare(b.tanggal))
+          .map(a=>`<li style="font-size:11px;margin-bottom:2px"><span style="color:#888;font-weight:600">${formatTgl(a.tanggal).split(' ').slice(0,2).join(' ')}:</span> ${a.deskripsi}</li>`)
+          .join('');
+        const deskHtml=deskList?`<ul style="padding-left:14px;margin:0;list-style:disc">${deskList}</ul>`:`<span style="color:#ccc;font-size:11px">—</span>`;
+
+        html+=`<tr>
+          <td style="text-align:center">${no++}</td>
+          <td><strong>${pk.nama}</strong></td>
+          <td class="text-sm text-gray">${pk.jabatan}</td>
+          ${cols}
+          <td style="text-align:center;font-weight:600">${tH}</td>
+          <td style="text-align:center">${tL.toFixed(1)}</td>
+          <td style="text-align:right">${rupiah(tH*pk.upah)}</td>
+          <td style="text-align:right">${rupiah(tL*pk.lembur)}</td>
+          <td style="text-align:right;font-weight:700;color:var(--red)">${rupiah(tB)}</td>
+          <td>${deskHtml}</td>
+        </tr>`;
+      });
+
+      wGrandTotal+=mTotal;wGrandHari+=mHari;
+      // Sub-total per mandor
+      html+=`<tr style="background:#f5f0e0;border-top:2px solid var(--gold)">
+        <td colspan="3" style="text-align:right;font-size:12px;font-weight:700;color:#92400e">Sub-Total Mandor ${mn.nama}</td>
+        <td colspan="7"></td>
+        <td style="text-align:center;font-weight:700;color:#92400e">${mHari}</td>
+        <td></td><td></td><td></td>
+        <td style="text-align:right;font-weight:700;color:var(--red)">${rupiah(mTotal)}</td>
+        <td style="font-size:11px;color:#92400e">Transfer ke:<br><strong>${mn.rekening||'-'}</strong></td>
+      </tr>`;
+      html+=`</tbody></table></div>`;
     });
-    html+=`<tr style="background:var(--gray-100)"><td colspan="3" style="text-align:right;font-weight:700;font-size:12px">Sub-Total</td><td colspan="7"></td>
-      <td style="text-align:center;font-weight:700">${gHari}</td><td></td><td></td><td></td>
-      <td style="text-align:right;font-weight:700;color:var(--red)">${rupiah(gBayar)}</td></tr>`;
-    html+=`</tbody></table></div></div>`;
+
+    grandTotal+=wGrandTotal;grandHari+=wGrandHari;
+    html+=`<div style="background:#111;color:#fff;padding:8px 14px;font-size:12px;font-weight:700;display:flex;justify-content:space-between;margin-bottom:8px">
+      <span>Total Minggu ini</span><span style="color:var(--gold)">${rupiah(wGrandTotal)}</span>
+    </div>`;
+    html+=`</div>`;// tutup rekap-week-block
   });
-  const totalAll=data.reduce((s,a)=>s+a.total,0);
-  const hariAll=data.reduce((s,a)=>s+a.hariKerja,0);
+
   html+=`<div class="card" style="background:var(--black);color:#fff;border:none;margin-top:4px">
     <div class="flex-center justify-between">
       <span style="font-size:14px;font-weight:700">GRAND TOTAL SEMUA PERIODE</span>
-      <span style="font-size:14px;font-weight:700;color:var(--gold)">${rupiah(totalAll)}</span>
+      <span style="font-size:14px;font-weight:700;color:var(--gold)">${rupiah(grandTotal)}</span>
     </div>
-    <div class="text-sm" style="color:var(--gray-500);margin-top:4px">${hariAll} hari kerja · ${data.length} record</div>
+    <div class="text-sm" style="color:var(--gray-500);margin-top:4px">${grandHari} hari kerja · ${data.length} record</div>
   </div>`;
   tbl.innerHTML=html;
 }
@@ -1270,70 +1337,127 @@ function printRekap() {
   const dari=document.getElementById('rek-dari').value;
   const sampai=document.getElementById('rek-sampai').value;
   const pr=pid?DB.proyek.find(p=>p.id===pid):null;
-  const mn=pr?DB.mandor.find(m=>m.id===pr.mandorId):null;
-  const sm=pr?DB.siteManager.find(s=>s.id===pr.smId):null;
+  const smObj=pr?DB.siteManager.find(s=>s.id===pr.smId):null;
   const weeks=getWeeksInRange(dari,sampai);
   let body='',grandTotal=0,grandHari=0;
+
   weeks.forEach(week=>{
     const wData=data.filter(a=>a.tanggal>=week.start&&a.tanggal<=week.end);
     if(!wData.length)return;
-    const grouped={};wData.forEach(a=>{if(!grouped[a.pekerjaId])grouped[a.pekerjaId]=[];grouped[a.pekerjaId].push(a);});
-    let rows='',wTotal=0,wHari=0,no=1;
-    Object.entries(grouped).forEach(([pkId,recs])=>{
-      const pk=DB.pekerja.find(p=>p.id===pkId)||{nama:'?',jabatan:'?',upah:0,lembur:0};
-      const tH=recs.reduce((s,a)=>s+a.hariKerja,0);
-      const tL=recs.reduce((s,a)=>s+a.lemburJam,0);
-      const tB=recs.reduce((s,a)=>s+a.total,0);
-      wTotal+=tB;wHari+=tH;grandTotal+=tB;grandHari+=tH;
-      const cols=[0,1,2,3,4,5,6].map(i=>{
+
+    // Group by mandor then pekerja
+    const byMandor={};
+    wData.forEach(a=>{
+      const mnId=a.mandorId||'_tanpa_mandor';
+      if(!byMandor[mnId])byMandor[mnId]=[];
+      byMandor[mnId].push(a);
+    });
+
+    let wGrandTotal=0,wGrandHari=0;
+    body+=`<div class="week-block">
+      <div class="week-title">Periode Minggu: ${formatTgl(week.start)} — ${formatTgl(week.end)}</div>`;
+
+    Object.entries(byMandor).forEach(([mnId,mnRecs])=>{
+      const mn=DB.mandor.find(m=>m.id===mnId)||{nama:'(Tidak ada Mandor)',rekening:'-',hp:'-'};
+      const byPekerja={};
+      mnRecs.forEach(a=>{if(!byPekerja[a.pekerjaId])byPekerja[a.pekerjaId]=[];byPekerja[a.pekerjaId].push(a);});
+      let mTotal=0,mHari=0,no=1,rows='';
+
+      Object.entries(byPekerja).forEach(([pkId,recs])=>{
+        const pk=DB.pekerja.find(p=>p.id===pkId)||{nama:'?',jabatan:'?',upah:0,lembur:0};
+        const tH=recs.reduce((s,a)=>s+a.hariKerja,0);
+        const tL=recs.reduce((s,a)=>s+a.lemburJam,0);
+        const tB=recs.reduce((s,a)=>s+a.total,0);
+        mTotal+=tB;mHari+=tH;
+
+        const cols=[0,1,2,3,4,5,6].map(i=>{
+          const parts=week.start.split('-').map(Number);
+          const d=new Date(parts[0],parts[1]-1,parts[2]+i);
+          const tgl=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+          const a=recs.find(r=>r.tanggal===tgl);
+          if(!a)return'<td>-</td>';
+          const mark=a.status==='approved'?'✓':a.status==='rejected'?'✗':'?';
+          return`<td>${mark}/${a.hariKerja}</td>`;
+        }).join('');
+
+        // Deskripsi list per tanggal (print)
+        const deskItems=recs.filter(a=>a.deskripsi).sort((a,b)=>a.tanggal.localeCompare(b.tanggal));
+        const deskHtml=deskItems.length
+          ?`<ul style="padding-left:10px;margin:0;font-size:8px;list-style:disc">${deskItems.map(a=>`<li><b>${formatTgl(a.tanggal).split(' ').slice(0,2).join(' ')}:</b> ${a.deskripsi}</li>`).join('')}</ul>`
+          :'—';
+
+        rows+=`<tr>
+          <td>${no++}</td>
+          <td class="tl">${pk.nama}<br><small>${pk.jabatan}</small></td>
+          <td class="num">${rupiah(pk.upah)}</td>
+          <td class="num">${rupiah(pk.lembur)}</td>
+          ${cols}
+          <td>${tH}</td><td>${tL.toFixed(1)}</td>
+          <td class="num">${rupiah(tH*pk.upah)}</td>
+          <td class="num">${rupiah(tL*pk.lembur)}</td>
+          <td class="num"><strong>${rupiah(tB)}</strong></td>
+          <td class="tl">${deskHtml}</td>
+        </tr>`;
+      });
+
+      wGrandTotal+=mTotal;wGrandHari+=mHari;
+      const dateCols=[0,1,2,3,4,5,6].map(i=>{
         const parts=week.start.split('-').map(Number);
         const d=new Date(parts[0],parts[1]-1,parts[2]+i);
-        const tgl=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        const a=recs.find(r=>r.tanggal===tgl);
-        if(!a)return'<td>-</td>';
-        const mark=a.status==='approved'?'✓':a.status==='rejected'?'✗':'?';
-        return`<td>${mark}/${a.hariKerja}</td>`;
+        return`<th>${HARI_PENDEK[i]}/${d.getDate()}</th>`;
       }).join('');
-      rows+=`<tr><td>${no++}</td><td class="tl">${pk.nama} / ${pk.jabatan}</td><td class="num">${rupiah(pk.upah)}</td><td class="num">${rupiah(pk.lembur)}</td>
-        ${cols}<td>${tH}</td><td>${tL.toFixed(1)}</td><td class="num">${rupiah(tH*pk.upah)}</td><td class="num">${rupiah(tL*pk.lembur)}</td><td class="num"><strong>${rupiah(tB)}</strong></td></tr>`;
+
+      body+=`<div style="margin-top:8px">
+        <div style="background:#1a1a1a;color:#fff;padding:4px 8px;font-size:9px;font-weight:700;display:flex;justify-content:space-between">
+          <span>Mandor: ${mn.nama}</span>
+          <span>Rekening: ${mn.rekening||'-'} | HP: ${mn.hp||'-'}</span>
+        </div>
+        <table class="print-tbl">
+          <thead><tr>
+            <th>No</th><th class="tl">Nama / Jabatan</th><th>Upah/Hari</th><th>Lbr/j</th>
+            ${dateCols}<th>∑H</th><th>∑L</th><th>Upah</th><th>Lembur</th><th>Total</th><th class="tl">Deskripsi Pekerjaan</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+          <tfoot><tr style="background:#f5f0e0">
+            <td colspan="4" style="text-align:right;font-weight:700">Sub-Total Mandor ${mn.nama}</td>
+            <td colspan="7"></td>
+            <td style="font-weight:700">${mHari}</td><td></td><td></td><td></td>
+            <td class="num"><strong>${rupiah(mTotal)}</strong></td>
+            <td class="tl" style="font-size:8px"><strong>Transfer ke:</strong><br>${mn.rekening||'-'}</td>
+          </tr></tfoot>
+        </table>
+      </div>`;
     });
-    const dateCols=[0,1,2,3,4,5,6].map(i=>{
-      const parts=week.start.split('-').map(Number);
-      const d=new Date(parts[0],parts[1]-1,parts[2]+i);
-      return`<th>${HARI_PENDEK[i]}/${d.getDate()}</th>`;
-    }).join('');
-    body+=`<div class="week-block">
-      <div class="week-title">Minggu: ${formatTgl(week.start)} — ${formatTgl(week.end)}</div>
-      <table class="print-tbl"><thead><tr>
-        <th>No</th><th class="tl">Nama / Jabatan</th><th>Upah/Hari</th><th>Lbr/j</th>
-        ${dateCols}<th>∑H</th><th>∑L</th><th>Upah</th><th>Lembur</th><th>Total</th>
-      </tr></thead><tbody>${rows}</tbody>
-      <tfoot><tr><td colspan="4" style="text-align:right;font-weight:700">Sub-Total</td><td colspan="7"></td>
-        <td>${wHari}</td><td></td><td></td><td></td><td class="num"><strong>${rupiah(wTotal)}</strong></td></tr></tfoot>
-      </table></div>`;
+
+    grandTotal+=wGrandTotal;grandHari+=wGrandHari;
+    body+=`<div style="background:#111;color:#fff;padding:4px 8px;font-size:10px;font-weight:700;display:flex;justify-content:space-between;margin-top:4px">
+      <span>Total Minggu: ${formatTgl(week.start)} — ${formatTgl(week.end)}</span>
+      <span>${rupiah(wGrandTotal)}</span>
+    </div>`;
+    body+=`</div>`; // tutup week-block
   });
+
   document.getElementById('print-area').innerHTML=`
     <div class="print-header">
       <div class="co-name">KALIABANG</div>
       <div class="co-sub">PT. Kaliabang Jaya Pratama</div>
-      <h1>ABSEN PEKERJA HARIAN</h1>
+      <h1>REKAP UPAH PEKERJA HARIAN</h1>
       <p>${pr?.nama||'Semua Proyek'} &nbsp;|&nbsp; ${formatTgl(dari)} s/d ${formatTgl(sampai)}</p>
     </div>
     <div class="print-meta">
       <span><strong>Proyek</strong>: ${pr?.nama||'Semua'}</span>
       <span><strong>Lokasi</strong>: ${pr?.lokasi||'-'}</span>
-      <span><strong>Mandor</strong>: ${mn?.nama||'-'}</span>
-      <span><strong>Site Manager</strong>: ${sm?.nama||'-'}</span>
+      <span><strong>Site Manager</strong>: ${smObj?.nama||'-'}</span>
       <span><strong>Periode</strong>: ${formatTgl(dari)} – ${formatTgl(sampai)}</span>
       <span><strong>Dicetak</strong>: ${formatTgl(todayLocal())}</span>
     </div>
     ${body}
-    <div class="grand-total-box">GRAND TOTAL: ${rupiah(grandTotal)} &nbsp;(${grandHari} hari kerja)</div>
+    <div class="grand-total-box">GRAND TOTAL SEMUA PERIODE: ${rupiah(grandTotal)} &nbsp;(${grandHari} hari kerja)</div>
     <div style="margin-top:12px">
-      <p class="print-note">✓=Approved &nbsp;?=Pending &nbsp;✗=Rejected &nbsp;|&nbsp; Jam normal 8j/hari. Kelebihan = lembur. Min 4j = 0.5 hari.</p>
+      <p class="print-note">✓=Approved &nbsp;?=Pending &nbsp;✗=Rejected &nbsp;| Jam normal 8j/hari. Kelebihan=lembur. Min 4j=0.5 hari. Pembayaran ditransfer ke no. rekening masing-masing Mandor.</p>
       <div class="print-ttd">
-        <div class="print-ttd-box"><div>Mengetahui, Mandor</div><div class="line">${mn?.nama||'_______________'}</div></div>
-        <div class="print-ttd-box"><div>Menyetujui, Site Manager</div><div class="line">${sm?.nama||'_______________'}</div></div>
+        <div class="print-ttd-box"><div>Mengetahui,<br>Site Manager</div><div class="line">${smObj?.nama||'_______________'}</div></div>
+        <div class="print-ttd-box"><div>Dibuat oleh,<br>Admin</div><div class="line">_______________</div></div>
       </div>
     </div>`;
   window.print();
