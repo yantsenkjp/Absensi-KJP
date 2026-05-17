@@ -151,6 +151,14 @@ textarea{resize:vertical;min-height:90px}
       </select>
     </div>
 
+    <!-- Mandor -->
+    <div class="form-group">
+      <label>Mandor</label>
+      <select id="f-mandor">
+        <option value="">-- Pilih Mandor --</option>
+      </select>
+    </div>
+
     <!-- Pekerja -->
     <div class="form-group">
       <label>Nama Pekerja</label>
@@ -317,6 +325,14 @@ function init(){
 }
 
 function onProyekChange(){
+  const proyekId=document.getElementById('f-proyek').value;
+  const pr=DB.proyek.find(p=>p.id===proyekId);
+  // Isi dropdown mandor
+  const selMn=document.getElementById('f-mandor');
+  selMn.innerHTML='<option value="">-- Pilih Mandor --</option>'+
+    DB.mandor.map(m=>`<option value="${m.id}">${m.nama}</option>`).join('');
+  if(pr?.mandorId) selMn.value=pr.mandorId;
+  // Isi pekerja
   const selPk=document.getElementById('f-pekerja');
   selPk.innerHTML='<option value="">-- Pilih Nama --</option>'+
     DB.pekerja.map(p=>`<option value="${p.id}">${p.nama}</option>`).join('');
@@ -413,6 +429,7 @@ function delMedia(id){mediaFormFiles=mediaFormFiles.filter(f=>f.id!==id);renderM
 // ════════════════════════════════
 function simpanAbsenForm(){
   const proyekId=document.getElementById('f-proyek').value;
+  const mandorId=document.getElementById('f-mandor').value;
   const pekerjaId=document.getElementById('f-pekerja').value;
   const tanggal=document.getElementById('f-tanggal').value;
   const masuk=document.getElementById('f-masuk').value;
@@ -420,6 +437,7 @@ function simpanAbsenForm(){
   const deskripsi=document.getElementById('f-deskripsi').value.trim();
 
   if(!proyekId)return showAlert('Pilih proyek terlebih dahulu!');
+  if(!mandorId)return showAlert('Pilih mandor!');
   if(!pekerjaId)return showAlert('Pilih nama pekerja!');
   if(!tanggal)return showAlert('Pilih tanggal!');
   if(!masuk||!pulang)return showAlert('Isi jam masuk dan pulang!');
@@ -433,7 +451,7 @@ function simpanAbsenForm(){
   const{hariKerja,lemburJam,total,durMenit}=hitungAbsensi(masuk,pulang,pk?.upah,pk?.lembur);
 
   DB.absensi.push({
-    id:uid(), proyekId, pekerjaId, tanggal, masuk, pulang,
+    id:uid(), proyekId, mandorId, pekerjaId, tanggal, masuk, pulang,
     durMenit, hariKerja, lemburJam,
     upahHarian:pk?.upah||0, upahLembur:pk?.lembur||0, total,
     deskripsi, media:[...mediaFormFiles],
