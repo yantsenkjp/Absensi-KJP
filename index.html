@@ -200,7 +200,7 @@ tr:hover td{background:#fafafa}
   <div class="nav-item" onclick="goto('input-absensi')"><span class="icon">✏️</span> Input Absensi</div>
   <div class="nav-item" onclick="goto('validasi')"><span class="icon">✅</span> Validasi SM</div>
   <div class="nav-item" onclick="goto('rekap')"><span class="icon">📋</span> Rekap & Print</div>
-  <div class="nav-item" onclick="goto('laporan')"><span class="icon">📸</span> Laporan Pekerjaan</div>
+  <div class="nav-item" onclick="goto('laporan')"><span class="icon">📸</span> Laporan & Foto</div>
   <div class="sidebar-section">Master Data</div>
   <div class="nav-item" onclick="goto('pekerja')"><span class="icon">👷</span> Pekerja</div>
   <div class="nav-item" onclick="goto('mandor')"><span class="icon">🦺</span> Mandor</div>
@@ -261,9 +261,20 @@ tr:hover td{background:#fafafa}
             </div>
           </div>
           <div id="kalkulasi" class="alert alert-info mb-12" style="display:none"></div>
+          <!-- REVISI 3: Deskripsi + foto sekarang ada di form absensi (tidak double dengan laporan) -->
           <div class="form-group mb-12">
             <label>Deskripsi Pekerjaan</label>
             <textarea id="in-deskripsi" placeholder="Contoh: Instalasi kabel NYM 2.5mm lantai 3..."></textarea>
+          </div>
+          <div class="form-group mb-12">
+            <label>Foto / Video Pekerjaan <span style="font-weight:400;color:var(--gray-500)">(opsional)</span></label>
+            <div class="upload-zone" id="upload-zone-absen" onclick="document.getElementById('file-input-absen').click()" ondragover="dragOverAbsen(event)" ondragleave="dragLeaveAbsen(event)" ondrop="dropFileAbsen(event)">
+              <div style="font-size:28px">📷</div>
+              <p>Klik atau drag &amp; drop foto / video pekerjaan</p>
+              <p style="font-size:11px;margin-top:4px">JPG, PNG, MP4, MOV — maks 50MB/file</p>
+            </div>
+            <input type="file" id="file-input-absen" multiple accept="image/*,video/*" style="display:none" onchange="handleFilesAbsen(this.files)">
+            <div class="media-grid" id="media-preview-absen"></div>
           </div>
           <button class="btn btn-primary" style="width:100%" onclick="simpanAbsensi()">💾 Simpan Absensi</button>
         </div>
@@ -349,51 +360,32 @@ tr:hover td{background:#fafafa}
     <div id="rekap-result" style="display:none"><div id="rekap-table"></div></div>
   </div>
 
-  <!-- ══ LAPORAN PEKERJAAN ══ -->
+  <!-- ══ LAPORAN & FOTO (terintegrasi dengan absensi) ══ -->
   <div class="page" id="page-laporan">
-    <div class="two-col">
-      <div>
-        <div class="card">
-          <div class="card-title"><span>📸</span> Tambah Laporan Pekerjaan</div>
-          <div id="alert-laporan"></div>
-          <div class="form-group mb-12">
-            <label>Proyek</label>
-            <select id="lap-proyek"><option value="">-- Pilih Proyek --</option></select>
-          </div>
-          <div class="form-group mb-12">
-            <label>Tanggal</label>
-            <input type="date" id="lap-tanggal">
-          </div>
-          <div class="form-group mb-12">
-            <label>Judul Pekerjaan</label>
-            <input type="text" id="lap-judul" placeholder="Contoh: Pemasangan panel MDB lantai 2">
-          </div>
-          <div class="form-group mb-12">
-            <label>Deskripsi Detail</label>
-            <textarea id="lap-deskripsi" placeholder="Progress, kendala, target..."></textarea>
-          </div>
-          <div class="form-group mb-12">
-            <label>Upload Foto / Video</label>
-            <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
-              <div style="font-size:32px">📁</div>
-              <p>Klik atau drag &amp; drop foto / video</p>
-              <p style="font-size:11px;margin-top:4px">JPG, PNG, MP4, MOV — maks 50MB/file</p>
-            </div>
-            <input type="file" id="file-input" multiple accept="image/*,video/*" style="display:none" onchange="handleFiles(this.files)">
-            <div class="media-grid" id="media-preview"></div>
-          </div>
-          <button class="btn btn-primary" style="width:100%" onclick="simpanLaporan()">💾 Simpan Laporan</button>
+    <div class="card mb-16">
+      <div class="card-title"><span>🔍</span> Filter Laporan</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Proyek</label>
+          <select id="lap-filter-proyek" onchange="renderLaporan()"><option value="">Semua Proyek</option></select>
+        </div>
+        <div class="form-group">
+          <label>Pekerja</label>
+          <select id="lap-filter-pekerja" onchange="renderLaporan()"><option value="">Semua Pekerja</option></select>
+        </div>
+        <div class="form-group">
+          <label>Dari Tanggal</label>
+          <input type="date" id="lap-dari" onchange="renderLaporan()">
+        </div>
+        <div class="form-group">
+          <label>Sampai Tanggal</label>
+          <input type="date" id="lap-sampai" onchange="renderLaporan()">
         </div>
       </div>
-      <div>
-        <div class="card">
-          <div class="card-title"><span>📂</span> Daftar Laporan</div>
-          <div class="form-group mb-12">
-            <select id="lap-filter-proyek" onchange="renderLaporan()"><option value="">Semua Proyek</option></select>
-          </div>
-          <div id="laporan-list"></div>
-        </div>
-      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>📸</span> Laporan Harian Pekerja <span class="text-sm text-gray" style="font-weight:400;margin-left:4px">(deskripsi &amp; foto diambil dari data absensi)</span></div>
+      <div id="laporan-list"></div>
     </div>
   </div>
 
@@ -405,7 +397,16 @@ tr:hover td{background:#fafafa}
         <input type="hidden" id="pk-id">
         <div id="alert-pk"></div>
         <div class="form-group mb-12"><label>Nama Pekerja</label><input type="text" id="pk-nama" placeholder="Nama lengkap"></div>
-        <div class="form-group mb-12"><label>Jabatan / Skill</label><input type="text" id="pk-jabatan" placeholder="Pinsen / Semi Skill / Helper"></div>
+        <div class="form-group mb-12">
+          <label>Jabatan</label>
+          <select id="pk-jabatan">
+            <option value="">-- Pilih Jabatan --</option>
+            <option value="Mandor">Mandor</option>
+            <option value="Tukang">Tukang</option>
+            <option value="Semi Tukang">Semi Tukang</option>
+            <option value="Helper">Helper</option>
+          </select>
+        </div>
         <div class="form-grid mb-12">
           <div class="form-group">
             <label>Upah Harian (Rp)</label>
@@ -675,7 +676,7 @@ let DB = loadDB();
 let currentSM = null;
 let rejectTarget = null;
 let editJamTarget = null;
-let mediaFiles = [];
+let mediaFilesAbsen = []; // media disimpan langsung di record absensi
 
 function loadDB() {
   try { const r = localStorage.getItem(KEY); if (r) return JSON.parse(r); } catch(e){}
@@ -872,7 +873,7 @@ function hitungAbsensi(masuk,pulang,upahHarian,upahLembur) {
 // ══════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════
-const pageTitles={dashboard:'Dashboard','input-absensi':'Input Absensi',validasi:'Validasi Site Manager',rekap:'Rekap & Print',laporan:'Laporan Pekerjaan',pekerja:'Data Pekerja',mandor:'Data Mandor','site-manager':'Data Site Manager',proyek:'Data Proyek',pengaturan:'Pengaturan Google Sheets'};
+const pageTitles={dashboard:'Dashboard','input-absensi':'Input Absensi',validasi:'Validasi Site Manager',rekap:'Rekap & Print',laporan:'Laporan & Foto Pekerjaan',pekerja:'Data Pekerja',mandor:'Data Mandor','site-manager':'Data Site Manager',proyek:'Data Proyek',pengaturan:'Pengaturan Google Sheets'};
 function goto(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -941,7 +942,7 @@ function onPekerjaChange() {
   const el=document.getElementById('info-pekerja');
   if(!pid){el.style.display='none';document.getElementById('week-preview-wrap').style.display='none';return;}
   const pk=DB.pekerja.find(p=>p.id===pid);
-  if(pk){el.style.display='block';el.innerHTML=`👷 <strong>${pk.nama}</strong> · ${pk.jabatan} · <strong>${rupiah(pk.upah)}/hari</strong> · Lembur <strong>${rupiah(pk.lembur)}/jam</strong>`;}
+  if(pk){el.style.display='block';el.innerHTML=`👷 <strong>${pk.nama}</strong> · ${pk.jabatan}`;}
   hitungJam(); renderWeekPreview();
 }
 function onTanggalChange() { hitungJam(); renderWeekPreview(); }
@@ -1015,10 +1016,17 @@ function simpanAbsensi() {
   if(DB.absensi.find(a=>a.pekerjaId===pekerjaId&&a.tanggal===tanggal&&a.proyekId===proyekId)){showAlert(el,'error','Absensi ini sudah ada!');return;}
   const pk=DB.pekerja.find(p=>p.id===pekerjaId);
   const {hariKerja,lemburJam,total,durMenit}=hitungAbsensi(masuk,pulang,pk?.upah,pk?.lembur);
-  DB.absensi.push({id:uid(),proyekId,pekerjaId,tanggal,masuk,pulang,durMenit,hariKerja,lemburJam,upahHarian:pk?.upah||0,upahLembur:pk?.lembur||0,total,deskripsi,status:'pending',catatanReject:'',catatanEditJam:'',createdAt:new Date().toISOString()});
+  // Revisi 3: simpan media langsung di record absensi
+  DB.absensi.push({id:uid(),proyekId,pekerjaId,tanggal,masuk,pulang,durMenit,hariKerja,lemburJam,
+    upahHarian:pk?.upah||0,upahLembur:pk?.lembur||0,total,deskripsi,
+    media:[...mediaFilesAbsen],
+    status:'pending',catatanReject:'',catatanEditJam:'',createdAt:new Date().toISOString()});
   saveDB();
-  showAlert(el,'success','Absensi disimpan & di-sync ke Sheets!');
+  showAlert(el,'success','Absensi & laporan disimpan!');
   document.getElementById('in-deskripsi').value='';
+  mediaFilesAbsen=[];
+  document.getElementById('media-preview-absen').innerHTML='';
+  document.getElementById('file-input-absen').value='';
   renderAbsensiHariIni(); renderWeekPreview();
 }
 function renderAbsensiHariIni() {
@@ -1345,60 +1353,112 @@ function exportCSV() {
 }
 
 // ══════════════════════════════════════════
-// LAPORAN PEKERJAAN
+// UPLOAD FOTO DI FORM ABSENSI (Revisi 3)
+// ══════════════════════════════════════════
+function handleFilesAbsen(files){
+  Array.from(files).forEach(f=>{
+    if(f.size>52428800){alert('Max 50MB per file');return;}
+    const r=new FileReader();
+    r.onload=e=>{mediaFilesAbsen.push({id:uid(),name:f.name,type:f.type.startsWith('video')?'video':'image',dataUrl:e.target.result});renderMediaPreviewAbsen();};
+    r.readAsDataURL(f);
+  });
+}
+function dragOverAbsen(e){e.preventDefault();document.getElementById('upload-zone-absen').classList.add('drag-over');}
+function dragLeaveAbsen(){document.getElementById('upload-zone-absen').classList.remove('drag-over');}
+function dropFileAbsen(e){e.preventDefault();dragLeaveAbsen();handleFilesAbsen(e.dataTransfer.files);}
+function renderMediaPreviewAbsen(){
+  document.getElementById('media-preview-absen').innerHTML=mediaFilesAbsen.map(f=>`
+    <div class="media-thumb">
+      ${f.type==='video'?`<video src="${f.dataUrl}" muted></video>`:`<img src="${f.dataUrl}" alt="${f.name}">`}
+      <div class="type-badge">${f.type==='video'?'VID':'IMG'}</div>
+      <button class="del-btn" onclick="removeMediaAbsen('${f.id}')">✕</button>
+    </div>`).join('');
+}
+function removeMediaAbsen(id){mediaFilesAbsen=mediaFilesAbsen.filter(f=>f.id!==id);renderMediaPreviewAbsen();}
+
+// ══════════════════════════════════════════
+// LAPORAN & FOTO (terintegrasi dengan absensi)
 // ══════════════════════════════════════════
 function initLaporan() {
-  const opts=DB.proyek.map(p=>`<option value="${p.id}">${p.nama}</option>`).join('');
-  document.getElementById('lap-proyek').innerHTML='<option value="">-- Pilih Proyek --</option>'+opts;
-  document.getElementById('lap-filter-proyek').innerHTML='<option value="">Semua Proyek</option>'+opts;
-  document.getElementById('lap-tanggal').value=todayLocal();
-  mediaFiles=[];document.getElementById('media-preview').innerHTML='';
-  if(document.getElementById('file-input'))document.getElementById('file-input').value='';
+  // Isi filter dropdown
+  document.getElementById('lap-filter-proyek').innerHTML='<option value="">Semua Proyek</option>'+DB.proyek.map(p=>`<option value="${p.id}">${p.nama}</option>`).join('');
+  document.getElementById('lap-filter-pekerja').innerHTML='<option value="">Semua Pekerja</option>'+DB.pekerja.map(p=>`<option value="${p.id}">${p.nama}</option>`).join('');
+  // Default filter: minggu ini
+  const {start,end}=getMingguPeriode(todayStr());
+  document.getElementById('lap-dari').value=start;
+  document.getElementById('lap-sampai').value=end;
   renderLaporan();
 }
-function handleFiles(files){Array.from(files).forEach(f=>{if(f.size>52428800){alert('Max 50MB');return;}const r=new FileReader();r.onload=e=>{mediaFiles.push({id:uid(),name:f.name,type:f.type.startsWith('video')?'video':'image',dataUrl:e.target.result});renderMediaPreview();};r.readAsDataURL(f);});}
-function dragOver(e){e.preventDefault();document.getElementById('upload-zone').classList.add('drag-over');}
-function dragLeave(){document.getElementById('upload-zone').classList.remove('drag-over');}
-function dropFile(e){e.preventDefault();dragLeave();handleFiles(e.dataTransfer.files);}
-function renderMediaPreview(){document.getElementById('media-preview').innerHTML=mediaFiles.map(f=>`<div class="media-thumb">${f.type==='video'?`<video src="${f.dataUrl}" muted></video>`:`<img src="${f.dataUrl}" alt="${f.name}">`}<div class="type-badge">${f.type==='video'?'VID':'IMG'}</div><button class="del-btn" onclick="removeMedia('${f.id}')">✕</button></div>`).join('');}
-function removeMedia(id){mediaFiles=mediaFiles.filter(f=>f.id!==id);renderMediaPreview();}
-function simpanLaporan(){
-  const proyekId=document.getElementById('lap-proyek').value;
-  const tanggal=document.getElementById('lap-tanggal').value;
-  const judul=document.getElementById('lap-judul').value.trim();
-  const deskripsi=document.getElementById('lap-deskripsi').value.trim();
-  const el=document.getElementById('alert-laporan');
-  if(!proyekId||!tanggal||!judul){showAlert(el,'error','Proyek, tanggal, judul wajib!');return;}
-  DB.laporan.push({id:uid(),proyekId,tanggal,judul,deskripsi,media:[...mediaFiles],createdAt:new Date().toISOString()});
-  saveDB();showAlert(el,'success','Laporan disimpan!');
-  document.getElementById('lap-judul').value='';document.getElementById('lap-deskripsi').value='';
-  mediaFiles=[];document.getElementById('media-preview').innerHTML='';document.getElementById('file-input').value='';
-  renderLaporan();
-}
-function renderLaporan(){
-  const fp=document.getElementById('lap-filter-proyek').value;
-  let list=[...DB.laporan];if(fp)list=list.filter(l=>l.proyekId===fp);
+
+function renderLaporan() {
+  const filterPr=document.getElementById('lap-filter-proyek').value;
+  const filterPk=document.getElementById('lap-filter-pekerja').value;
+  const dari=document.getElementById('lap-dari').value;
+  const sampai=document.getElementById('lap-sampai').value;
+
+  // Ambil data absensi yang punya deskripsi atau foto
+  let list=DB.absensi.filter(a=>{
+    if(filterPr&&a.proyekId!==filterPr)return false;
+    if(filterPk&&a.pekerjaId!==filterPk)return false;
+    if(dari&&a.tanggal<dari)return false;
+    if(sampai&&a.tanggal>sampai)return false;
+    return a.deskripsi||(a.media&&a.media.length>0);
+  });
   list.sort((a,b)=>b.tanggal.localeCompare(a.tanggal));
+
   const el=document.getElementById('laporan-list');
-  if(!list.length){el.innerHTML='<div class="empty-state"><div class="emoji">📂</div>Belum ada laporan</div>';return;}
-  el.innerHTML=list.map(l=>{
-    const pr=DB.proyek.find(p=>p.id===l.proyekId)||{};
-    const mc=l.media?.length||0;
-    const thumb=mc>0&&l.media[0].type==='image'?`<img src="${l.media[0].dataUrl}" style="width:100%;height:80px;object-fit:cover;border-radius:6px;margin-top:6px;cursor:pointer" onclick="lihatMedia('${l.id}')">`:
-      mc>0?`<div onclick="lihatMedia('${l.id}')" style="margin-top:6px;background:#111;border-radius:6px;height:56px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;font-size:22px">▶</div>`:'';
-    return `<div style="padding:12px 0;border-bottom:1px solid #f0f0f0">
-      <div class="flex-center justify-between"><div style="font-weight:600;font-size:13px">${l.judul}</div><button class="btn btn-sm btn-danger" onclick="hapusLaporan('${l.id}')">🗑</button></div>
-      <div class="text-sm text-gray">${pr.nama||'-'} · ${formatTgl(l.tanggal)}</div>
-      ${l.deskripsi?`<div class="text-sm" style="margin-top:3px;color:#444">${l.deskripsi}</div>`:''}
+  if(!list.length){
+    el.innerHTML='<div class="empty-state"><div class="emoji">📂</div>Belum ada laporan dengan deskripsi atau foto di periode ini</div>';
+    return;
+  }
+
+  el.innerHTML=list.map(a=>{
+    const pk=DB.pekerja.find(p=>p.id===a.pekerjaId)||{nama:'-',jabatan:'-'};
+    const pr=DB.proyek.find(p=>p.id===a.proyekId)||{nama:'-'};
+    const mc=a.media?.length||0;
+    // Thumbnail foto pertama
+    const thumb=mc>0&&a.media[0].type==='image'
+      ?`<img src="${a.media[0].dataUrl}" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:10px;cursor:pointer" onclick="lihatMedia('${a.id}')">`
+      :mc>0&&a.media[0].type==='video'
+      ?`<div onclick="lihatMedia('${a.id}')" style="margin-top:10px;background:#111;border-radius:8px;height:80px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;font-size:28px;gap:8px"><span>▶</span><span style="font-size:13px">Putar Video</span></div>`
+      :'';
+    // Grid foto mini jika lebih dari 1
+    const extraMedia=mc>1?`<div class="media-grid" style="margin-top:8px">${a.media.slice(1,5).map(f=>`
+      <div class="media-thumb" onclick="lihatMedia('${a.id}')" style="cursor:pointer">
+        ${f.type==='video'?`<video src="${f.dataUrl}" muted></video>`:`<img src="${f.dataUrl}">`}
+        <div class="type-badge">${f.type==='video'?'VID':'IMG'}</div>
+      </div>`).join('')}${mc>5?`<div style="display:flex;align-items:center;justify-content:center;background:#f0f0f0;border-radius:8px;aspect-ratio:1;font-weight:700;color:#888;font-size:13px">+${mc-5}</div>`:''}
+    </div>`:'';
+
+    return `<div style="padding:16px 0;border-bottom:1px solid #f0f0f0">
+      <div class="flex-center justify-between">
+        <div>
+          <div style="font-weight:700;font-size:14px">${pk.nama}</div>
+          <div class="text-sm text-gray">${pk.jabatan} · ${pr.nama} · ${getNamaHari(a.tanggal)}, ${formatTgl(a.tanggal)}</div>
+        </div>
+        <span class="badge badge-${a.status}">${a.status}</span>
+      </div>
+      <div style="font-size:12px;color:#666;margin-top:4px">⏱ ${a.masuk}–${a.pulang} · ${a.hariKerja} hari${a.lemburJam>0?' · Lembur '+a.lemburJam.toFixed(1)+'j':''}</div>
+      ${a.deskripsi?`<div style="margin-top:8px;font-size:14px;color:#333;background:#f8f8f8;border-radius:6px;padding:10px;border-left:3px solid var(--gold)">${a.deskripsi}</div>`:''}
       ${thumb}
-      ${mc>0?`<button class="btn btn-outline btn-sm" style="margin-top:6px" onclick="lihatMedia('${l.id}')">📎 ${mc} file</button>`:''}
-    </div>`;}).join('');
+      ${extraMedia}
+      ${mc>0?`<button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="lihatMedia('${a.id}')">📎 Lihat semua ${mc} file</button>`:''}
+    </div>`;
+  }).join('');
 }
-function hapusLaporan(id){if(!confirm('Hapus laporan?'))return;DB.laporan=DB.laporan.filter(l=>l.id!==id);saveDB();renderLaporan();}
-function lihatMedia(id){
-  const l=DB.laporan.find(x=>x.id===id);if(!l||!l.media?.length)return;
-  document.getElementById('foto-modal-title').textContent=l.judul+' ('+l.media.length+' file)';
-  document.getElementById('foto-modal-content').innerHTML=l.media.map(f=>`<div style="margin-bottom:16px">${f.type==='video'?`<video src="${f.dataUrl}" controls style="max-width:100%;border-radius:8px"></video>`:`<img src="${f.dataUrl}" alt="${f.name}" style="max-width:100%;border-radius:8px">`}<div class="text-sm text-gray" style="margin-top:4px">${f.name}</div></div>`).join('');
+
+function lihatMedia(absenId){
+  const a=DB.absensi.find(x=>x.id===absenId);
+  if(!a||!a.media?.length)return;
+  const pk=DB.pekerja.find(p=>p.id===a.pekerjaId)||{nama:'-'};
+  document.getElementById('foto-modal-title').textContent=pk.nama+' — '+formatTgl(a.tanggal)+' ('+a.media.length+' file)';
+  document.getElementById('foto-modal-content').innerHTML=a.media.map(f=>`
+    <div style="margin-bottom:16px">
+      ${f.type==='video'
+        ?`<video src="${f.dataUrl}" controls style="max-width:100%;border-radius:8px"></video>`
+        :`<img src="${f.dataUrl}" alt="${f.name}" style="max-width:100%;border-radius:8px">`}
+      <div class="text-sm text-gray" style="margin-top:4px">${f.name}</div>
+    </div>`).join('');
   document.getElementById('foto-modal').classList.add('show');
 }
 
