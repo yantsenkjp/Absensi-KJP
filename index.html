@@ -362,6 +362,20 @@ tr:hover td{background:#fafafa}
         <button class="btn btn-outline" onclick="exportCSV()">📥 Export CSV</button>
         <button class="btn btn-green btn-sm" onclick="syncRekapToSheets()" style="margin-left:auto">☁️ Sync ke Sheets</button>
       </div>
+      <!-- Opsi pembayaran -->
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid #f0f0f0">
+        <div style="font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:10px">💳 Opsi Tampilan Pembayaran</div>
+        <div style="display:flex;gap:20px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:400">
+            <input type="radio" name="bayar-mode" id="bayar-mandor" value="mandor" checked onchange="renderRekap()" style="width:auto;accent-color:var(--red)">
+            <span>🦺 <strong>Bayar via Mandor</strong> — rekening &amp; total per mandor (default)</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:400">
+            <input type="radio" name="bayar-mode" id="bayar-pekerja" value="pekerja" onchange="renderRekap()" style="width:auto;accent-color:var(--red)">
+            <span>👷 <strong>Bayar langsung ke Pekerja</strong> — rekening tiap pekerja ditampilkan</span>
+          </label>
+        </div>
+      </div>
     </div>
     <div id="rekap-result" style="display:none"><div id="rekap-table"></div></div>
   </div>
@@ -1210,6 +1224,10 @@ function getRekapData() {
     return true;
   });
 }
+function getBayarMode(){
+  return document.querySelector('input[name="bayar-mode"]:checked')?.value||'mandor';
+}
+
 function renderRekap() {
   const data=getRekapData();
   const el=document.getElementById('rekap-result');
@@ -1219,6 +1237,7 @@ function renderRekap() {
   const dari=document.getElementById('rek-dari').value;
   const sampai=document.getElementById('rek-sampai').value;
   const weeks=getWeeksInRange(dari,sampai);
+  const mode=getBayarMode(); // 'mandor' | 'pekerja'
   let html='';
   let grandTotal=0,grandHari=0;
 
@@ -1226,7 +1245,6 @@ function renderRekap() {
     const wData=data.filter(a=>a.tanggal>=week.start&&a.tanggal<=week.end);
     if(!wData.length)return;
 
-    // Group by mandor first, then by pekerja
     const byMandor={};
     wData.forEach(a=>{
       const mnId=a.mandorId||'_tanpa_mandor';
@@ -1241,7 +1259,6 @@ function renderRekap() {
 
     Object.entries(byMandor).forEach(([mnId,mnRecs])=>{
       const mn=DB.mandor.find(m=>m.id===mnId)||{nama:'(Tidak ada Mandor)',rekening:'-',hp:'-'};
-      // Sub-group by pekerja
       const byPekerja={};
       mnRecs.forEach(a=>{if(!byPekerja[a.pekerjaId])byPekerja[a.pekerjaId]=[];byPekerja[a.pekerjaId].push(a);});
       let mTotal=0,mHari=0,no=1;
@@ -1249,7 +1266,9 @@ function renderRekap() {
       // Header mandor
       html+=`<div style="background:#1a1a1a;color:#fff;padding:8px 14px;font-size:12px;font-weight:700;display:flex;justify-content:space-between;align-items:center;border-top:3px solid var(--gold)">
         <span>🦺 Mandor: ${mn.nama}</span>
-        <span style="font-size:11px;font-weight:400;color:#ccc">Rekening: ${mn.rekening||'-'} · HP: ${mn.hp||'-'}</span>
+        <span style="font-size:11px;font-weight:400;color:#ccc">
+          ${mode==='mandor'?`Rekening: <strong style="color:#fff">${mn.rekening||'-'}</strong> · HP: ${mn.hp||'-'}`:'Pembayaran langsung ke rekening pekerja'}
+        </span>
       </div>
       <div class="table-wrap"><table>
         <thead><tr><th>No</th><th>Nama Pekerja</th><th>Jabatan</th>
@@ -1258,11 +1277,13 @@ function renderRekap() {
           const d=new Date(parts[0],parts[1]-1,parts[2]+i);
           return`<th style="font-size:10px">${HARI_PENDEK[i]}<br><span style="font-weight:400">${d.getDate()}</span></th>`;
         }).join('')}
-        <th>∑Hari</th><th>Lembur</th><th>Upah</th><th>+Lembur</th><th>Total</th><th style="min-width:160px">Deskripsi Pekerjaan</th>
+        <th>∑Hari</th><th>Lembur</th><th>Upah</th><th>+Lembur</th><th>Total</th>
+        ${mode==='pekerja'?'<th style="min-width:120px">Rekening Pekerja</th>':''}
+        <th style="min-width:160px">Deskripsi Pekerjaan</th>
         </tr></thead><tbody>`;
 
       Object.entries(byPekerja).forEach(([pkId,recs])=>{
-        const pk=DB.pekerja.find(p=>p.id===pkId)||{nama:'?',jabatan:'?',upah:0,lembur:0};
+        const pk=DB.pekerja.find(p=>p.id===pkId)||{nama:'?',jabatan:'?',upah:0,lembur:0,rekening:'-'};
         const tH=recs.reduce((s,a)=>s+a.hariKerja,0);
         const tL=recs.reduce((s,a)=>s+a.lemburJam,0);
         const tB=recs.reduce((s,a)=>s+a.total,0);
@@ -1278,13 +1299,14 @@ function renderRekap() {
           return`<td style="font-size:11px;text-align:center" title="${a.masuk}–${a.pulang}">${dot}<br><span style="color:#666">${a.hariKerja}h</span></td>`;
         }).join('');
 
-        // Deskripsi sebagai list per tanggal
-        const deskList=recs
-          .filter(a=>a.deskripsi)
-          .sort((a,b)=>a.tanggal.localeCompare(b.tanggal))
-          .map(a=>`<li style="font-size:11px;margin-bottom:2px"><span style="color:#888;font-weight:600">${formatTgl(a.tanggal).split(' ').slice(0,2).join(' ')}:</span> ${a.deskripsi}</li>`)
-          .join('');
+        const deskList=recs.filter(a=>a.deskripsi).sort((a,b)=>a.tanggal.localeCompare(b.tanggal))
+          .map(a=>`<li style="font-size:11px;margin-bottom:2px"><span style="color:#888;font-weight:600">${formatTgl(a.tanggal).split(' ').slice(0,2).join(' ')}:</span> ${a.deskripsi}</li>`).join('');
         const deskHtml=deskList?`<ul style="padding-left:14px;margin:0;list-style:disc">${deskList}</ul>`:`<span style="color:#ccc;font-size:11px">—</span>`;
+
+        // Kolom rekening pekerja (hanya di mode pekerja)
+        const rekeningPkCell=mode==='pekerja'
+          ?`<td style="font-size:11px;color:#166534;font-weight:600">${pk.rekening||'<span style="color:#f97316">Belum diisi</span>'}</td>`
+          :'';
 
         html+=`<tr>
           <td style="text-align:center">${no++}</td>
@@ -1296,20 +1318,34 @@ function renderRekap() {
           <td style="text-align:right">${rupiah(tH*pk.upah)}</td>
           <td style="text-align:right">${rupiah(tL*pk.lembur)}</td>
           <td style="text-align:right;font-weight:700;color:var(--red)">${rupiah(tB)}</td>
+          ${rekeningPkCell}
           <td>${deskHtml}</td>
         </tr>`;
       });
 
       wGrandTotal+=mTotal;wGrandHari+=mHari;
-      // Sub-total per mandor
-      html+=`<tr style="background:#f5f0e0;border-top:2px solid var(--gold)">
-        <td colspan="3" style="text-align:right;font-size:12px;font-weight:700;color:#92400e">Sub-Total Mandor ${mn.nama}</td>
-        <td colspan="7"></td>
-        <td style="text-align:center;font-weight:700;color:#92400e">${mHari}</td>
-        <td></td><td></td><td></td>
-        <td style="text-align:right;font-weight:700;color:var(--red)">${rupiah(mTotal)}</td>
-        <td style="font-size:11px;color:#92400e">Transfer ke:<br><strong>${mn.rekening||'-'}</strong></td>
-      </tr>`;
+
+      // Sub-total per mandor — tampilan beda berdasarkan mode
+      if(mode==='mandor'){
+        html+=`<tr style="background:#f5f0e0;border-top:2px solid var(--gold)">
+          <td colspan="3" style="text-align:right;font-size:12px;font-weight:700;color:#92400e">Sub-Total Mandor ${mn.nama}</td>
+          <td colspan="7"></td>
+          <td style="text-align:center;font-weight:700;color:#92400e">${mHari}</td>
+          <td></td><td></td><td></td>
+          <td style="text-align:right;font-weight:700;color:var(--red)">${rupiah(mTotal)}</td>
+          <td style="font-size:11px;color:#92400e">Transfer ke:<br><strong>${mn.rekening||'-'}</strong></td>
+        </tr>`;
+      } else {
+        html+=`<tr style="background:#f0fdf4;border-top:2px solid #22c55e">
+          <td colspan="3" style="text-align:right;font-size:12px;font-weight:700;color:#166534">Sub-Total Grup Mandor ${mn.nama}</td>
+          <td colspan="7"></td>
+          <td style="text-align:center;font-weight:700;color:#166534">${mHari}</td>
+          <td></td><td></td><td></td>
+          <td style="text-align:right;font-weight:700;color:var(--red)">${rupiah(mTotal)}</td>
+          <td style="font-size:11px;color:#166534">Transfer ke rekening<br>masing-masing pekerja</td>
+          <td></td>
+        </tr>`;
+      }
       html+=`</tbody></table></div>`;
     });
 
@@ -1317,7 +1353,7 @@ function renderRekap() {
     html+=`<div style="background:#111;color:#fff;padding:8px 14px;font-size:12px;font-weight:700;display:flex;justify-content:space-between;margin-bottom:8px">
       <span>Total Minggu ini</span><span style="color:var(--gold)">${rupiah(wGrandTotal)}</span>
     </div>`;
-    html+=`</div>`;// tutup rekap-week-block
+    html+=`</div>`;
   });
 
   html+=`<div class="card" style="background:var(--black);color:#fff;border:none;margin-top:4px">
@@ -1325,7 +1361,7 @@ function renderRekap() {
       <span style="font-size:14px;font-weight:700">GRAND TOTAL SEMUA PERIODE</span>
       <span style="font-size:14px;font-weight:700;color:var(--gold)">${rupiah(grandTotal)}</span>
     </div>
-    <div class="text-sm" style="color:var(--gray-500);margin-top:4px">${grandHari} hari kerja · ${data.length} record</div>
+    <div class="text-sm" style="color:var(--gray-500);margin-top:4px">${grandHari} hari kerja · ${data.length} record · Mode: ${mode==='mandor'?'Bayar via Mandor':'Bayar langsung ke Pekerja'}</div>
   </div>`;
   tbl.innerHTML=html;
 }
@@ -1336,6 +1372,7 @@ function printRekap() {
   const pid=document.getElementById('rek-proyek').value;
   const dari=document.getElementById('rek-dari').value;
   const sampai=document.getElementById('rek-sampai').value;
+  const mode=getBayarMode();
   const pr=pid?DB.proyek.find(p=>p.id===pid):null;
   const smObj=pr?DB.siteManager.find(s=>s.id===pr.smId):null;
   const weeks=getWeeksInRange(dari,sampai);
@@ -1396,6 +1433,7 @@ function printRekap() {
           <td class="num">${rupiah(tH*pk.upah)}</td>
           <td class="num">${rupiah(tL*pk.lembur)}</td>
           <td class="num"><strong>${rupiah(tB)}</strong></td>
+          ${mode==='pekerja'?`<td class="tl" style="font-size:8px;color:#166534"><strong>${pk.rekening||'Belum diisi'}</strong></td>`:''}
           <td class="tl">${deskHtml}</td>
         </tr>`;
       });
@@ -1410,21 +1448,32 @@ function printRekap() {
       body+=`<div style="margin-top:8px">
         <div style="background:#1a1a1a;color:#fff;padding:4px 8px;font-size:9px;font-weight:700;display:flex;justify-content:space-between">
           <span>Mandor: ${mn.nama}</span>
-          <span>Rekening: ${mn.rekening||'-'} | HP: ${mn.hp||'-'}</span>
+          <span>${mode==='mandor'?`Rekening: ${mn.rekening||'-'} | HP: ${mn.hp||'-'}`:'Bayar langsung ke pekerja'}</span>
         </div>
         <table class="print-tbl">
           <thead><tr>
             <th>No</th><th class="tl">Nama / Jabatan</th><th>Upah/Hari</th><th>Lbr/j</th>
-            ${dateCols}<th>∑H</th><th>∑L</th><th>Upah</th><th>Lembur</th><th>Total</th><th class="tl">Deskripsi Pekerjaan</th>
+            ${dateCols}<th>∑H</th><th>∑L</th><th>Upah</th><th>Lembur</th><th>Total</th>
+            ${mode==='pekerja'?'<th class="tl">Rekening Pekerja</th>':''}
+            <th class="tl">Deskripsi Pekerjaan</th>
           </tr></thead>
           <tbody>${rows}</tbody>
-          <tfoot><tr style="background:#f5f0e0">
-            <td colspan="4" style="text-align:right;font-weight:700">Sub-Total Mandor ${mn.nama}</td>
-            <td colspan="7"></td>
-            <td style="font-weight:700">${mHari}</td><td></td><td></td><td></td>
-            <td class="num"><strong>${rupiah(mTotal)}</strong></td>
-            <td class="tl" style="font-size:8px"><strong>Transfer ke:</strong><br>${mn.rekening||'-'}</td>
-          </tr></tfoot>
+          ${mode==='mandor'
+            ?`<tfoot><tr style="background:#f5f0e0">
+                <td colspan="4" style="text-align:right;font-weight:700">Sub-Total Mandor ${mn.nama}</td>
+                <td colspan="7"></td>
+                <td style="font-weight:700">${mHari}</td><td></td><td></td><td></td>
+                <td class="num"><strong>${rupiah(mTotal)}</strong></td>
+                <td class="tl" style="font-size:8px"><strong>Transfer ke:</strong><br>${mn.rekening||'-'}</td>
+              </tr></tfoot>`
+            :`<tfoot><tr style="background:#f0fdf4">
+                <td colspan="4" style="text-align:right;font-weight:700">Sub-Total Grup Mandor ${mn.nama}</td>
+                <td colspan="7"></td>
+                <td style="font-weight:700">${mHari}</td><td></td><td></td><td></td>
+                <td class="num"><strong>${rupiah(mTotal)}</strong></td>
+                <td class="tl" style="font-size:8px">Transfer ke rekening<br>masing-masing pekerja</td>
+                <td></td>
+              </tr></tfoot>`}
         </table>
       </div>`;
     });
@@ -1436,6 +1485,10 @@ function printRekap() {
     </div>`;
     body+=`</div>`; // tutup week-block
   });
+
+  const modeLabelPrint=mode==='mandor'
+    ?'Pembayaran via Mandor (transfer ke rekening mandor)'
+    :'Pembayaran langsung ke Pekerja (transfer ke rekening pekerja)';
 
   document.getElementById('print-area').innerHTML=`
     <div class="print-header">
@@ -1449,14 +1502,15 @@ function printRekap() {
       <span><strong>Lokasi</strong>: ${pr?.lokasi||'-'}</span>
       <span><strong>Site Manager</strong>: ${smObj?.nama||'-'}</span>
       <span><strong>Periode</strong>: ${formatTgl(dari)} – ${formatTgl(sampai)}</span>
+      <span><strong>Mode Bayar</strong>: ${modeLabelPrint}</span>
       <span><strong>Dicetak</strong>: ${formatTgl(todayLocal())}</span>
     </div>
     ${body}
     <div class="grand-total-box">GRAND TOTAL SEMUA PERIODE: ${rupiah(grandTotal)} &nbsp;(${grandHari} hari kerja)</div>
     <div style="margin-top:12px">
-      <p class="print-note">✓=Approved &nbsp;?=Pending &nbsp;✗=Rejected &nbsp;| Jam normal 8j/hari. Kelebihan=lembur. Min 4j=0.5 hari. Pembayaran ditransfer ke no. rekening masing-masing Mandor.</p>
+      <p class="print-note">✓=Approved &nbsp;?=Pending &nbsp;✗=Rejected &nbsp;| Jam normal 8j/hari. Kelebihan=lembur. Min 4j=0.5 hari. ${mode==='mandor'?'Pembayaran ditransfer ke no. rekening masing-masing Mandor.':'Pembayaran ditransfer langsung ke rekening tiap Pekerja.'}</p>
       <div class="print-ttd">
-        <div class="print-ttd-box"><div>Mengetahui,<br>Site Manager</div><div class="line">${smObj?.nama||'_______________'}</div></div>
+        <div class="print-ttd-box"><div>Menyetujui,<br>Site Manager</div><div class="line">${smObj?.nama||'_______________'}</div></div>
         <div class="print-ttd-box"><div>Dibuat oleh,<br>Admin</div><div class="line">_______________</div></div>
       </div>
     </div>`;
