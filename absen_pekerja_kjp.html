@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Absen KJP — Input Pekerja</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+:root{
+  --red:#C8102E; --red-dark:#9e0c23; --gold:#F5A800;
+  --black:#111; --gray:#888; --gray-bg:#f5f5f5;
+  --green:#16a34a; --blue:#1d4ed8;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--gray-bg);color:var(--black);min-height:100vh}
+
+/* HEADER */
+.header{background:var(--black);padding:16px 20px;display:flex;align-items:center;gap:12px}
+.header svg{flex-shrink:0}
+.header-text{flex:1}
+.header-title{font-size:13px;font-weight:700;color:#fff;letter-spacing:1px}
+.header-sub{font-size:10px;color:#888;margin-top:1px}
+.header-date{font-size:11px;color:#666;text-align:right;line-height:1.4}
+
+/* CARD */
+.card{background:#fff;border-radius:14px;border:1px solid #e8e8e8;padding:20px;margin:16px}
+.card-title{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+
+/* FORM */
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+label{font-size:12px;font-weight:600;color:#555}
+input,select,textarea{padding:12px 14px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;color:var(--black);width:100%;-webkit-appearance:none;appearance:none}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red)}
+textarea{resize:vertical;min-height:90px}
+
+/* PEKERJA CARD - tampil setelah dipilih */
+.pekerja-card{background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:14px;margin-bottom:14px;display:none}
+.pekerja-card.show{display:block}
+.pekerja-nama{font-size:17px;font-weight:700;margin-bottom:2px}
+.pekerja-jabatan{font-size:13px;color:var(--blue);font-weight:600}
+.pekerja-proyek{font-size:12px;color:var(--gray);margin-top:4px}
+
+/* WEEK PREVIEW */
+.week-box{background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;padding:14px;margin-bottom:14px;display:none}
+.week-box.show{display:block}
+.week-title{font-size:11px;font-weight:700;color:#92400e;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.week-row{display:grid;grid-template-columns:80px 1fr auto;gap:6px;padding:5px 0;border-bottom:1px solid #fde68a;font-size:13px;align-items:center}
+.week-row:last-child{border-bottom:none}
+.week-row.today{background:#fef3c7;border-radius:6px;padding:5px 6px}
+.day-label{font-weight:600;display:flex;align-items:center;gap:5px}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-approved{background:#22c55e}
+.dot-pending{background:var(--gold)}
+.dot-rejected{background:var(--red)}
+.dot-empty{background:#ddd}
+.badge{display:inline-flex;padding:2px 7px;border-radius:12px;font-size:10px;font-weight:700}
+.badge-pending{background:#fef3c7;color:#92400e}
+.badge-approved{background:#dcfce7;color:#166534}
+.badge-rejected{background:#fee2e2;color:#991b1b}
+.week-total{margin-top:8px;padding-top:8px;border-top:1px solid #fde68a;font-size:12px;font-weight:600;color:#92400e}
+
+/* JAM GRID */
+.jam-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+
+/* KALKULASI */
+.kalk-box{background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px;color:#166534;display:none}
+.kalk-box.show{display:block}
+
+/* UPLOAD */
+.upload-zone{border:2px dashed #e0e0e0;border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:#fafafa;transition:all .15s;margin-bottom:10px}
+.upload-zone:active{border-color:var(--red);background:#fff5f5}
+.upload-zone .icon{font-size:28px;margin-bottom:6px}
+.upload-zone p{font-size:13px;color:var(--gray)}
+.upload-zone .hint{font-size:11px;color:#bbb;margin-top:3px}
+.media-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.media-thumb{position:relative;border-radius:8px;overflow:hidden;aspect-ratio:1;background:#eee}
+.media-thumb img,.media-thumb video{width:100%;height:100%;object-fit:cover}
+.media-thumb .del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.media-thumb .vbadge{position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.6);color:#fff;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700}
+
+/* BUTTON */
+.btn-submit{background:var(--red);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;padding:16px;width:100%;cursor:pointer;font-family:inherit;letter-spacing:.3px;transition:background .15s;margin-top:4px}
+.btn-submit:active{background:var(--red-dark)}
+.btn-submit:disabled{background:#ccc;cursor:not-allowed}
+
+/* ALERT */
+.alert{padding:12px 16px;border-radius:10px;font-size:14px;margin-bottom:12px;display:none}
+.alert.show{display:block}
+.alert-success{background:#dcfce7;color:#166534;border:1px solid #86efac}
+.alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+
+/* HISTORY */
+.hist-item{padding:12px 0;border-bottom:1px solid #f0f0f0}
+.hist-item:last-child{border-bottom:none}
+.hist-nama{font-weight:700;font-size:14px}
+.hist-info{font-size:12px;color:var(--gray);margin-top:2px}
+.hist-desk{font-size:13px;color:#444;margin-top:4px;background:#f8f8f8;border-radius:6px;padding:8px;border-left:3px solid var(--gold)}
+
+/* EMPTY */
+.empty{text-align:center;padding:32px 16px;color:var(--gray);font-size:13px}
+.empty .ico{font-size:32px;margin-bottom:8px}
+
+/* TABS */
+.tabs{display:flex;gap:0;background:#fff;border-radius:12px;border:1px solid #e8e8e8;overflow:hidden;margin:0 16px 4px}
+.tab{flex:1;padding:12px;text-align:center;font-size:13px;font-weight:600;color:var(--gray);cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+.tab.active{color:var(--red);border-bottom-color:var(--red);background:#fff5f5}
+
+/* KONEKSI */
+.koneksi-box{background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px 16px;margin:12px 16px 0;font-size:12px;color:#166534;display:flex;align-items:center;gap:8px}
+.koneksi-box.off{background:#fef3c7;border-color:#fde68a;color:#92400e}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <svg width="28" height="28" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+    <rect x="2" y="4" width="13" height="32" fill="#C8102E"/>
+    <rect x="25" y="4" width="13" height="32" fill="#C8102E"/>
+    <rect x="15" y="16" width="10" height="20" fill="#C8102E"/>
+    <rect x="18" y="2" width="12" height="13" fill="#F5A800"/>
+  </svg>
+  <div class="header-text">
+    <div class="header-title">ABSENSI KJP</div>
+    <div class="header-sub">PT. Kaliabang Jaya Pratama</div>
+  </div>
+  <div class="header-date" id="header-date"></div>
+</div>
+
+<!-- KONEKSI SHEETS -->
+<div class="koneksi-box off" id="koneksi-box">⚠ Sheets belum terhubung — isi URL di pengaturan admin</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('absen')">✏️ Input Absen</div>
+  <div class="tab" onclick="switchTab('history')">📅 Riwayat</div>
+</div>
+
+<!-- ══ TAB ABSEN ══ -->
+<div id="tab-absen">
+
+  <div class="card">
+    <div class="card-title">✏️ Form Absensi Harian</div>
+    <div class="alert" id="alert-main"></div>
+
+    <!-- Proyek -->
+    <div class="form-group">
+      <label>Proyek</label>
+      <select id="f-proyek" onchange="onProyekChange()">
+        <option value="">-- Pilih Proyek --</option>
+      </select>
+    </div>
+
+    <!-- Pekerja -->
+    <div class="form-group">
+      <label>Nama Pekerja</label>
+      <select id="f-pekerja" onchange="onPekerjaChange()">
+        <option value="">-- Pilih Nama --</option>
+      </select>
+    </div>
+
+    <!-- Card info pekerja (nama + jabatan saja) -->
+    <div class="pekerja-card" id="info-pk">
+      <div class="pekerja-nama" id="pk-nama-display"></div>
+      <div class="pekerja-jabatan" id="pk-jabatan-display"></div>
+      <div class="pekerja-proyek" id="pk-proyek-display"></div>
+    </div>
+
+    <!-- Preview minggu -->
+    <div class="week-box" id="week-box">
+      <div class="week-title" id="week-title"></div>
+      <div id="week-rows"></div>
+      <div class="week-total" id="week-total"></div>
+    </div>
+
+    <!-- Tanggal -->
+    <div class="form-group">
+      <label>Tanggal</label>
+      <input type="date" id="f-tanggal" onchange="onTanggalChange()">
+    </div>
+
+    <!-- Jam -->
+    <div class="jam-grid">
+      <div class="form-group" style="margin-bottom:0">
+        <label>Jam Masuk</label>
+        <input type="time" id="f-masuk" value="08:00" onchange="hitungJam()">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label>Jam Pulang</label>
+        <input type="time" id="f-pulang" value="17:00" onchange="hitungJam()">
+      </div>
+    </div>
+
+    <!-- Kalkulasi -->
+    <div class="kalk-box" id="kalk-box"></div>
+
+    <!-- Deskripsi -->
+    <div class="form-group">
+      <label>Deskripsi Pekerjaan <span style="font-weight:400;color:#bbb">(opsional)</span></label>
+      <textarea id="f-deskripsi" placeholder="Contoh: Instalasi kabel NYM lantai 3, pemasangan stop kontak..."></textarea>
+    </div>
+
+    <!-- Upload Foto -->
+    <div class="form-group">
+      <label>Foto / Video Pekerjaan <span style="font-weight:400;color:#bbb">(opsional)</span></label>
+      <div class="upload-zone" onclick="document.getElementById('f-files').click()">
+        <div class="icon">📷</div>
+        <p>Tap untuk ambil foto atau pilih file</p>
+        <div class="hint">JPG, PNG, MP4 — maks 50MB/file</div>
+      </div>
+      <input type="file" id="f-files" multiple accept="image/*,video/*" capture="environment" style="display:none" onchange="handleFilesForm(this.files)">
+      <div class="media-grid" id="f-media-grid"></div>
+    </div>
+
+    <button class="btn-submit" id="btn-simpan" onclick="simpanAbsenForm()">💾 Simpan Absensi</button>
+  </div>
+
+</div><!-- /tab-absen -->
+
+<!-- ══ TAB HISTORY ══ -->
+<div id="tab-history" style="display:none">
+  <div class="card">
+    <div class="card-title">📅 Riwayat Absensi Minggu Ini</div>
+    <div class="form-group">
+      <label>Filter Pekerja</label>
+      <select id="hist-pekerja" onchange="renderHistory()">
+        <option value="">Semua Pekerja</option>
+      </select>
+    </div>
+    <div id="history-list"></div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════
+// DATA — ambil dari localStorage admin (key sama)
+// ════════════════════════════════
+const KEY = 'kjp_v4';
+let DB = loadDB();
+let mediaFormFiles = [];
+
+function loadDB(){
+  try{const r=localStorage.getItem(KEY);if(r)return JSON.parse(r);}catch(e){}
+  return{gsUrl:'',pekerja:[],mandor:[],siteManager:[],proyek:[],absensi:[],laporan:[]};
+}
+function saveDB(){ localStorage.setItem(KEY,JSON.stringify(DB)); syncToSheets(); }
+
+// ════════════════════════════════
+// HELPERS
+// ════════════════════════════════
+function uid(){return '_'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);}
+function todayStr(){const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;}
+function menit(t){const[h,m]=t.split(':').map(Number);return h*60+m;}
+function rupiah(n){return 'Rp '+Number(n||0).toLocaleString('id-ID');}
+const BLN=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
+const HARI=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+function formatTgl(s){if(!s)return '-';const[y,m,d]=s.split('-').map(Number);return `${d} ${BLN[m-1]} ${y}`;}
+function getNamaHari(s){if(!s)return '';const[y,m,d]=s.split('-').map(Number);return HARI[new Date(y,m-1,d).getDay()];}
+function getMingguPeriode(dateStr){
+  const[y,m,d]=dateStr.split('-').map(Number);
+  const cur=new Date(y,m-1,d);
+  const startD=new Date(cur);startD.setDate(cur.getDate()-cur.getDay());
+  const endD=new Date(startD);endD.setDate(startD.getDate()+6);
+  const fmt=x=>`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;
+  return{start:fmt(startD),end:fmt(endD)};
+}
+function hitungAbsensi(masuk,pulang,upahHarian,upahLembur){
+  const mnt=menit(pulang)-menit(masuk);
+  if(mnt<=0)return{hariKerja:0,lemburJam:0,total:0,durMenit:0};
+  const hariKerja=mnt>=240?(mnt>=480?1:0.5):0;
+  const lemburJam=Math.max(0,(mnt-480)/60);
+  const total=hariKerja*(upahHarian||0)+lemburJam*(upahLembur||0);
+  return{hariKerja,lemburJam,total,durMenit:mnt};
+}
+function showAlert(msg,type='error'){
+  const el=document.getElementById('alert-main');
+  el.className='alert alert-'+type+' show';
+  el.textContent=msg;
+  if(type==='success')setTimeout(()=>el.className='alert',3500);
+}
+
+// ════════════════════════════════
+// TABS
+// ════════════════════════════════
+function switchTab(tab){
+  document.getElementById('tab-absen').style.display=tab==='absen'?'block':'none';
+  document.getElementById('tab-history').style.display=tab==='history'?'block':'none';
+  document.querySelectorAll('.tab').forEach((t,i)=>{t.classList.toggle('active',(tab==='absen'&&i===0)||(tab==='history'&&i===1));});
+  if(tab==='history')renderHistory();
+}
+
+// ════════════════════════════════
+// INIT
+// ════════════════════════════════
+function init(){
+  // Header date
+  const now=new Date();
+  document.getElementById('header-date').innerHTML=
+    HARI[now.getDay()]+'<br>'+now.getDate()+' '+BLN[now.getMonth()]+' '+now.getFullYear();
+
+  // Koneksi Sheets
+  const kb=document.getElementById('koneksi-box');
+  if(DB.gsUrl){kb.className='koneksi-box';kb.textContent='✅ Terhubung ke Google Sheets';}
+
+  // Isi dropdown proyek (hanya aktif)
+  const selPr=document.getElementById('f-proyek');
+  selPr.innerHTML='<option value="">-- Pilih Proyek --</option>'+
+    DB.proyek.filter(p=>p.status==='aktif').map(p=>`<option value="${p.id}">${p.nama}</option>`).join('');
+
+  // History filter
+  document.getElementById('hist-pekerja').innerHTML='<option value="">Semua Pekerja</option>'+
+    DB.pekerja.map(p=>`<option value="${p.id}">${p.nama}</option>`).join('');
+
+  // Default tanggal
+  document.getElementById('f-tanggal').value=todayStr();
+  hitungJam();
+}
+
+function onProyekChange(){
+  const selPk=document.getElementById('f-pekerja');
+  selPk.innerHTML='<option value="">-- Pilih Nama --</option>'+
+    DB.pekerja.map(p=>`<option value="${p.id}">${p.nama}</option>`).join('');
+  document.getElementById('info-pk').className='pekerja-card';
+  document.getElementById('week-box').className='week-box';
+}
+
+function onPekerjaChange(){
+  const pid=document.getElementById('f-pekerja').value;
+  const proyekId=document.getElementById('f-proyek').value;
+  const infoEl=document.getElementById('info-pk');
+  if(!pid){infoEl.className='pekerja-card';document.getElementById('week-box').className='week-box';return;}
+  const pk=DB.pekerja.find(p=>p.id===pid)||{};
+  const pr=DB.proyek.find(p=>p.id===proyekId)||{};
+  // Tampilkan nama + jabatan SAJA (tanpa gaji)
+  document.getElementById('pk-nama-display').textContent=pk.nama||'-';
+  document.getElementById('pk-jabatan-display').textContent=pk.jabatan||'-';
+  document.getElementById('pk-proyek-display').textContent=pr.nama?'📍 '+pr.nama:'';
+  infoEl.className='pekerja-card show';
+  renderWeekPreview();
+}
+
+function onTanggalChange(){hitungJam();renderWeekPreview();}
+
+function renderWeekPreview(){
+  const pid=document.getElementById('f-pekerja').value;
+  const proyekId=document.getElementById('f-proyek').value;
+  const tanggal=document.getElementById('f-tanggal').value||todayStr();
+  const box=document.getElementById('week-box');
+  if(!pid){box.className='week-box';return;}
+  const{start,end}=getMingguPeriode(tanggal);
+  document.getElementById('week-title').textContent='Absensi minggu ini: '+formatTgl(start)+' – '+formatTgl(end);
+  let totalHari=0;
+  const rows=HARI.map((h,i)=>{
+    const[y,m,d]=start.split('-').map(Number);
+    const dt=new Date(y,m-1,d+i);
+    const tgl=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+    const abs=DB.absensi.find(a=>a.pekerjaId===pid&&a.tanggal===tgl&&(!proyekId||a.proyekId===proyekId));
+    const isToday=tgl===tanggal;
+    if(abs)totalHari+=abs.hariKerja;
+    const dotCls=abs?'dot dot-'+abs.status:'dot dot-empty';
+    const info=abs?`${abs.masuk}–${abs.pulang} <span class="badge badge-${abs.status}">${abs.status}</span>`
+      :`<span style="color:#ddd;font-size:12px">—</span>`;
+    return `<div class="week-row${isToday?' today':''}">
+      <span class="day-label"><span class="${dotCls}"></span>${h}</span>
+      <span style="font-size:11px;color:#999">${dt.getDate()} ${BLN[dt.getMonth()]}</span>
+      <span style="font-size:12px">${info}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('week-rows').innerHTML=rows;
+  document.getElementById('week-total').textContent='Total minggu ini: '+totalHari+' hari kerja';
+  box.className='week-box show';
+}
+
+function hitungJam(){
+  const masuk=document.getElementById('f-masuk').value;
+  const pulang=document.getElementById('f-pulang').value;
+  const el=document.getElementById('kalk-box');
+  if(!masuk||!pulang){el.className='kalk-box';return;}
+  const mnt=menit(pulang)-menit(masuk);
+  if(mnt<=0){el.className='kalk-box';return;}
+  const hariKerja=mnt>=240?(mnt>=480?1:0.5):0;
+  const lemburJam=Math.max(0,(mnt-480)/60);
+  el.className='kalk-box show';
+  el.innerHTML=`⏱ <strong>${Math.floor(mnt/60)}j ${mnt%60}m</strong> · Hari: <strong>${hariKerja}</strong>${lemburJam>0?' · Lembur: <strong>'+lemburJam.toFixed(1)+'j</strong>':''}`;
+}
+
+// ════════════════════════════════
+// UPLOAD FOTO
+// ════════════════════════════════
+function handleFilesForm(files){
+  Array.from(files).forEach(f=>{
+    if(f.size>52428800){alert('Maks 50MB per file');return;}
+    const r=new FileReader();
+    r.onload=e=>{
+      mediaFormFiles.push({id:uid(),name:f.name,type:f.type.startsWith('video')?'video':'image',dataUrl:e.target.result});
+      renderMediaForm();
+    };
+    r.readAsDataURL(f);
+  });
+}
+function renderMediaForm(){
+  document.getElementById('f-media-grid').innerHTML=mediaFormFiles.map(f=>`
+    <div class="media-thumb">
+      ${f.type==='video'?`<video src="${f.dataUrl}" muted></video>`:`<img src="${f.dataUrl}" alt="">`}
+      ${f.type==='video'?`<div class="vbadge">VID</div>`:''}
+      <button class="del" onclick="delMedia('${f.id}')">✕</button>
+    </div>`).join('');
+}
+function delMedia(id){mediaFormFiles=mediaFormFiles.filter(f=>f.id!==id);renderMediaForm();}
+
+// ════════════════════════════════
+// SIMPAN ABSENSI
+// ════════════════════════════════
+function simpanAbsenForm(){
+  const proyekId=document.getElementById('f-proyek').value;
+  const pekerjaId=document.getElementById('f-pekerja').value;
+  const tanggal=document.getElementById('f-tanggal').value;
+  const masuk=document.getElementById('f-masuk').value;
+  const pulang=document.getElementById('f-pulang').value;
+  const deskripsi=document.getElementById('f-deskripsi').value.trim();
+
+  if(!proyekId)return showAlert('Pilih proyek terlebih dahulu!');
+  if(!pekerjaId)return showAlert('Pilih nama pekerja!');
+  if(!tanggal)return showAlert('Pilih tanggal!');
+  if(!masuk||!pulang)return showAlert('Isi jam masuk dan pulang!');
+  if(DB.absensi.find(a=>a.pekerjaId===pekerjaId&&a.tanggal===tanggal&&a.proyekId===proyekId))
+    return showAlert('Absensi kamu di proyek dan tanggal ini sudah ada!');
+
+  const btn=document.getElementById('btn-simpan');
+  btn.disabled=true; btn.textContent='Menyimpan...';
+
+  const pk=DB.pekerja.find(p=>p.id===pekerjaId);
+  const{hariKerja,lemburJam,total,durMenit}=hitungAbsensi(masuk,pulang,pk?.upah,pk?.lembur);
+
+  DB.absensi.push({
+    id:uid(), proyekId, pekerjaId, tanggal, masuk, pulang,
+    durMenit, hariKerja, lemburJam,
+    upahHarian:pk?.upah||0, upahLembur:pk?.lembur||0, total,
+    deskripsi, media:[...mediaFormFiles],
+    status:'pending', catatanReject:'', catatanEditJam:'',
+    createdAt:new Date().toISOString()
+  });
+  saveDB();
+
+  showAlert('✅ Absensi berhasil disimpan! Menunggu validasi Site Manager.','success');
+  document.getElementById('f-deskripsi').value='';
+  mediaFormFiles=[];
+  renderMediaForm();
+  document.getElementById('f-files').value='';
+  btn.disabled=false; btn.textContent='💾 Simpan Absensi';
+  renderWeekPreview();
+}
+
+// ════════════════════════════════
+// RIWAYAT
+// ════════════════════════════════
+function renderHistory(){
+  const filterPk=document.getElementById('hist-pekerja').value;
+  const{start,end}=getMingguPeriode(todayStr());
+  let list=DB.absensi.filter(a=>a.tanggal>=start&&a.tanggal<=end);
+  if(filterPk)list=list.filter(a=>a.pekerjaId===filterPk);
+  list.sort((a,b)=>b.tanggal.localeCompare(a.tanggal));
+  const el=document.getElementById('history-list');
+  if(!list.length){
+    el.innerHTML='<div class="empty"><div class="ico">📭</div>Belum ada absensi minggu ini</div>';
+    return;
+  }
+  el.innerHTML=list.map(a=>{
+    const pk=DB.pekerja.find(p=>p.id===a.pekerjaId)||{};
+    const pr=DB.proyek.find(p=>p.id===a.proyekId)||{};
+    const mc=a.media?.length||0;
+    return `<div class="hist-item">
+      <div class="hist-nama">${pk.nama||'-'} <span style="font-size:11px;font-weight:500;color:#888">· ${pk.jabatan||''}</span></div>
+      <div class="hist-info">${pr.nama||'-'} · ${getNamaHari(a.tanggal)} ${formatTgl(a.tanggal)} · ${a.masuk}–${a.pulang} · ${a.hariKerja} hari
+        <span class="badge badge-${a.status}" style="margin-left:4px">${a.status}</span>
+      </div>
+      ${a.deskripsi?`<div class="hist-desk">${a.deskripsi}</div>`:''}
+      ${mc>0?`<div style="font-size:12px;color:var(--blue);margin-top:4px">📎 ${mc} foto/video</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════
+// SYNC KE GOOGLE SHEETS
+// ════════════════════════════════
+async function syncToSheets(){
+  if(!DB.gsUrl)return;
+  try{
+    await fetch(DB.gsUrl,{
+      method:'POST',
+      body:JSON.stringify({action:'sync_absensi',rows:DB.absensi})
+    });
+  }catch(e){console.warn('Sync gagal:',e);}
+}
+
+init();
+</script>
+</body>
+</html>
