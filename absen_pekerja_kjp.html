@@ -337,13 +337,11 @@ function simpanSetup() {
   muatDataDariSheets();
 }
 
-// ── MUAT DATA MASTER DARI SHEETS ──
+// ── MUAT DATA MASTER DARI SHEETS (pakai JSONP untuk bypass CORS) ──
 function muatDataDariSheets() {
   if(!gsUrl) {
-    // Tidak ada URL — coba dari cache
     if(loadMasterCache()&&MASTER.proyek.length) {
-      loadAbsensiLok();
-      tampilkanForm();
+      loadAbsensiLok(); tampilkanForm();
       setStatus('📦 Mode offline — data dari cache terakhir','warn');
     } else {
       show('setup-panel');
@@ -354,33 +352,56 @@ function muatDataDariSheets() {
 
   setStatus('⏳ Memuat data dari Google Sheets...','info');
 
-  fetch(gsUrl+'?action=get_master', {method:'GET'})
-    .then(function(res){ return res.json(); })
-    .then(function(raw) {
-      if(!raw.ok||!raw.data) throw new Error('Data tidak valid');
+  // JSONP: satu-satunya cara bypass CORS dari browser ke Apps Script
+  var cbName = 'kjp_cb_' + Date.now();
+  var script = document.createElement('script');
+  var timer = setTimeout(function() {
+    // Timeout 10 detik — coba cache
+    cleanup();
+    pakaiCache('⚠️ Timeout. ');
+  }, 10000);
+
+  function cleanup() {
+    clearTimeout(timer);
+    delete window[cbName];
+    if(script.parentNode) script.parentNode.removeChild(script);
+  }
+
+  window[cbName] = function(raw) {
+    cleanup();
+    if(raw && raw.ok && raw.data) {
       MASTER.proyek  = raw.data.proyek  || [];
       MASTER.mandor  = raw.data.mandor  || [];
       MASTER.pekerja = raw.data.pekerja || [];
-      // Simpan cache
       localStorage.setItem(LS_MASTER, JSON.stringify(MASTER));
       loadAbsensiLok();
       tampilkanForm();
-      setStatus('✅ Terhubung · Data berhasil dimuat dari Google Sheets','ok');
-      // Kirim absensi yang tertunda (jika ada di antrian)
+      setStatus('✅ Terhubung · Data berhasil dimuat','ok');
       kirimAntrian();
-    })
-    .catch(function(err) {
-      // Gagal fetch — coba cache
-      if(loadMasterCache()&&MASTER.proyek.length) {
-        loadAbsensiLok();
-        tampilkanForm();
-        setStatus('📦 Offline — menggunakan data cache. Absensi tetap bisa disimpan dan akan dikirim saat online.','warn');
-      } else {
-        setStatus('❌ Gagal terhubung dan tidak ada cache tersedia. Cek koneksi internet.','err');
-        show('setup-panel');
-        document.getElementById('setup-url').value = gsUrl;
-      }
-    });
+    } else {
+      pakaiCache('Data tidak valid. ');
+    }
+  };
+
+  script.onerror = function() {
+    cleanup();
+    pakaiCache('Gagal terhubung. ');
+  };
+
+  script.src = gsUrl + '?action=get_master&callback=' + cbName;
+  document.head.appendChild(script);
+}
+
+function pakaiCache(prefix) {
+  if(loadMasterCache() && MASTER.proyek.length) {
+    loadAbsensiLok();
+    tampilkanForm();
+    setStatus('📦 ' + prefix + 'Menggunakan data cache. Absensi tetap bisa disimpan.','warn');
+  } else {
+    setStatus('❌ ' + prefix + 'Tidak ada cache. Cek URL Apps Script.','err');
+    show('setup-panel');
+    document.getElementById('setup-url').value = gsUrl;
+  }
 }
 
 // ── TAMPILKAN FORM ──
