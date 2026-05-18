@@ -267,10 +267,15 @@ tr:hover td{background:#fafafa}
             </div>
           </div>
           <div id="kalkulasi" class="alert alert-info mb-12" style="display:none"></div>
-          <!-- REVISI 3: Deskripsi + foto sekarang ada di form absensi (tidak double dengan laporan) -->
-          <div class="form-group mb-12">
-            <label>Deskripsi Pekerjaan</label>
-            <textarea id="in-deskripsi" placeholder="Contoh: Instalasi kabel NYM 2.5mm lantai 3..."></textarea>
+          <!-- REVISI 4: Multi-laporan pekerjaan per hari -->
+          <div style="margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <label style="font-size:12px;font-weight:600;color:var(--gray-700)">Laporan Pekerjaan Hari Ini</label>
+              <button type="button" class="btn btn-outline btn-sm" onclick="tambahLaporanItem()">+ Tambah Laporan</button>
+            </div>
+            <div id="laporan-items-wrap">
+              <!-- item pertama selalu ada -->
+            </div>
           </div>
           <div class="form-group mb-12">
             <label>Foto / Video Pekerjaan <span style="font-weight:400;color:var(--gray-500)">(opsional)</span></label>
@@ -946,9 +951,9 @@ function initInputAbsensi() {
   document.getElementById('in-proyek').innerHTML='<option value="">-- Pilih Proyek --</option>'+DB.proyek.filter(p=>p.status==='aktif').map(p=>`<option value="${p.id}">${p.nama}</option>`).join('');
   document.getElementById('in-pekerja').innerHTML='<option value="">-- Pilih Pekerja --</option>';
   document.getElementById('in-tanggal').value=todayLocal();
-  document.getElementById('in-deskripsi').value='';
   document.getElementById('info-pekerja').style.display='none';
   document.getElementById('week-preview-wrap').style.display='none';
+  initLaporanItems(); // REVISI 4
   hitungJam(); renderAbsensiHariIni();
 }
 function onProyekChange() {
@@ -1038,19 +1043,23 @@ function simpanAbsensi() {
   const tanggal=document.getElementById('in-tanggal').value;
   const masuk=document.getElementById('in-masuk').value;
   const pulang=document.getElementById('in-pulang').value;
-  const deskripsi=document.getElementById('in-deskripsi').value;
   const el=document.getElementById('alert-absensi');
   if(!proyekId||!mandorId||!pekerjaId||!tanggal||!masuk||!pulang){showAlert(el,'error','Lengkapi semua field termasuk Mandor!');return;}
   if(DB.absensi.find(a=>a.pekerjaId===pekerjaId&&a.tanggal===tanggal&&a.proyekId===proyekId)){showAlert(el,'error','Absensi ini sudah ada!');return;}
   const pk=DB.pekerja.find(p=>p.id===pekerjaId);
   const {hariKerja,lemburJam,total,durMenit}=hitungAbsensi(masuk,pulang,pk?.upah,pk?.lembur);
+  // REVISI 4: kumpulkan semua item laporan
+  const laporanItems=getLaporanItems();
+  const deskripsi=laporanItems.map(l=>`[${l.jamMulai}–${l.jamSelesai}] ${l.uraian}`).filter(Boolean).join(' | ');
   DB.absensi.push({id:uid(),proyekId,mandorId,pekerjaId,tanggal,masuk,pulang,durMenit,hariKerja,lemburJam,
-    upahHarian:pk?.upah||0,upahLembur:pk?.lembur||0,total,deskripsi,
+    upahHarian:pk?.upah||0,upahLembur:pk?.lembur||0,total,
+    deskripsi,         // ringkasan teks untuk tampilan
+    laporanItems,      // array detail laporan
     media:[...mediaFilesAbsen],
     status:'pending',catatanReject:'',catatanEditJam:'',createdAt:new Date().toISOString()});
   saveDB();
   showAlert(el,'success','Absensi & laporan disimpan!');
-  document.getElementById('in-deskripsi').value='';
+  resetLaporanItems();
   mediaFilesAbsen=[];
   document.getElementById('media-preview-absen').innerHTML='';
   document.getElementById('file-input-absen').value='';
@@ -1062,11 +1071,79 @@ function renderAbsensiHariIni() {
   const el=document.getElementById('list-absensi-hari-ini');
   el.innerHTML=!list.length?'<div class="empty-state"><div class="emoji">📭</div>Belum ada absensi hari ini</div>':
     list.map(a=>{const pk=DB.pekerja.find(p=>p.id===a.pekerjaId)||{};const pr=DB.proyek.find(p=>p.id===a.proyekId)||{};
+      const laporanHtml=a.laporanItems?.length
+        ?a.laporanItems.map(l=>`<div style="font-size:11px;color:#555;padding-left:8px;border-left:2px solid var(--gold)"><strong>${l.jamMulai}–${l.jamSelesai}</strong>: ${l.uraian}</div>`).join('')
+        :(a.deskripsi?`<div class="text-sm text-gray">${a.deskripsi}</div>`:'');
       return `<div style="padding:10px 0;border-bottom:1px solid #f0f0f0">
         <div class="flex-center justify-between"><div style="font-size:13px;font-weight:600">${pk.nama||'-'}</div><span class="badge badge-${a.status}">${a.status}</span></div>
         <div class="text-sm text-gray">${pr.nama||'-'} · ${a.masuk}–${a.pulang} · ${a.hariKerja} hari</div>
-        <div class="text-sm text-gray">${a.deskripsi||''}</div>
+        <div style="margin-top:4px;display:flex;flex-direction:column;gap:3px">${laporanHtml}</div>
       </div>`;}).join('');
+}
+
+// ══════════════════════════════════════════
+// REVISI 4: MULTI-LAPORAN PEKERJAAN PER HARI
+// ══════════════════════════════════════════
+let laporanItemCount = 0;
+
+function initLaporanItems() {
+  laporanItemCount = 0;
+  document.getElementById('laporan-items-wrap').innerHTML = '';
+  tambahLaporanItem(); // selalu mulai dengan 1 item
+}
+
+function tambahLaporanItem() {
+  laporanItemCount++;
+  const id = `lap-item-${laporanItemCount}`;
+  const masukVal = document.getElementById('in-masuk')?.value||'08:00';
+  const pulangVal = document.getElementById('in-pulang')?.value||'17:00';
+  const wrap = document.getElementById('laporan-items-wrap');
+  const div = document.createElement('div');
+  div.id = id;
+  div.style.cssText = 'background:#f8faff;border:1px solid #dbeafe;border-radius:8px;padding:12px;margin-bottom:8px;position:relative';
+  div.innerHTML = `
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <span style="font-size:11px;font-weight:700;color:#1d4ed8;min-width:60px">Lap. #${laporanItemCount}</span>
+      <div style="display:flex;gap:6px;flex:1;align-items:center">
+        <div style="display:flex;flex-direction:column;gap:3px;flex:1">
+          <label style="font-size:10px;font-weight:600;color:#555">Jam Mulai</label>
+          <input type="time" id="${id}-mulai" value="${masukVal}" style="padding:6px 8px;font-size:12px">
+        </div>
+        <span style="font-size:12px;color:#888;margin-top:14px">–</span>
+        <div style="display:flex;flex-direction:column;gap:3px;flex:1">
+          <label style="font-size:10px;font-weight:600;color:#555">Jam Selesai</label>
+          <input type="time" id="${id}-selesai" value="${pulangVal}" style="padding:6px 8px;font-size:12px">
+        </div>
+        ${laporanItemCount>1?`<button onclick="hapusLaporanItem('${id}')" style="margin-top:14px;background:#fee2e2;border:none;border-radius:6px;padding:6px 8px;cursor:pointer;font-size:12px;color:#dc2626">✕</button>`:''}
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <label style="font-size:10px;font-weight:600;color:#555">Uraian Pekerjaan</label>
+      <textarea id="${id}-uraian" placeholder="Contoh: Pemasangan lampu LED di koridor lantai 2..." style="min-height:60px;font-size:13px;padding:8px 10px"></textarea>
+    </div>`;
+  wrap.appendChild(div);
+}
+
+function hapusLaporanItem(id) {
+  const el = document.getElementById(id);
+  if(el) el.remove();
+}
+
+function getLaporanItems() {
+  const wrap = document.getElementById('laporan-items-wrap');
+  const items = [];
+  wrap.querySelectorAll('[id^="lap-item-"]').forEach(div => {
+    const id = div.id;
+    const mulai = document.getElementById(`${id}-mulai`)?.value||'';
+    const selesai = document.getElementById(`${id}-selesai`)?.value||'';
+    const uraian = document.getElementById(`${id}-uraian`)?.value?.trim()||'';
+    if(uraian) items.push({jamMulai:mulai, jamSelesai:selesai, uraian});
+  });
+  return items;
+}
+
+function resetLaporanItems() {
+  initLaporanItems();
 }
 
 // ══════════════════════════════════════════
@@ -1217,6 +1294,7 @@ function getRekapData() {
   const dari=document.getElementById('rek-dari').value;
   const sampai=document.getElementById('rek-sampai').value;
   return DB.absensi.filter(a=>{
+    if(a.status==='rejected')return false; // REVISI 1: absen ditolak tidak masuk rekap
     if(pid&&a.proyekId!==pid)return false;
     if(st&&a.status!==st)return false;
     if(dari&&a.tanggal<dari)return false;
@@ -1295,13 +1373,26 @@ function renderRekap() {
           const tgl=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
           const a=recs.find(r=>r.tanggal===tgl);
           if(!a)return`<td style="color:#e0e0e0;text-align:center">–</td>`;
-          const dot=a.status==='approved'?'✅':a.status==='rejected'?'❌':'⏳';
-          return`<td style="font-size:11px;text-align:center" title="${a.masuk}–${a.pulang}">${dot}<br><span style="color:#666">${a.hariKerja}h</span></td>`;
+          const lbStr=a.lemburJam>0?a.lemburJam.toFixed(1):'';
+          // REVISI 3: tampilan diagonal — hari di kiri, lembur di kanan
+          if(lbStr){
+            return`<td style="padding:0;text-align:center;min-width:36px" title="${a.masuk}–${a.pulang} | ${a.hariKerja}h + lembur ${lbStr}j">
+              <div style="position:relative;width:100%;height:36px;font-size:10px;font-weight:700">
+                <svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 40 36" preserveAspectRatio="none"><line x1="2" y1="2" x2="38" y2="34" stroke="#ccc" stroke-width="1"/></svg>
+                <span style="position:absolute;left:3px;top:2px;color:${a.status==='approved'?'#166534':'#92400e'}">${a.hariKerja}</span>
+                <span style="position:absolute;right:3px;bottom:2px;color:#1d4ed8">${lbStr}</span>
+              </div>
+            </td>`;
+          }
+          const clr=a.status==='approved'?'#166534':a.status==='rejected'?'#dc2626':'#92400e';
+          return`<td style="font-size:11px;text-align:center;font-weight:700;color:${clr}" title="${a.masuk}–${a.pulang}">${a.hariKerja}</td>`;
         }).join('');
 
-        const deskList=recs.filter(a=>a.deskripsi).sort((a,b)=>a.tanggal.localeCompare(b.tanggal))
-          .map(a=>`<li style="font-size:11px;margin-bottom:2px"><span style="color:#888;font-weight:600">${formatTgl(a.tanggal).split(' ').slice(0,2).join(' ')}:</span> ${a.deskripsi}</li>`).join('');
-        const deskHtml=deskList?`<ul style="padding-left:14px;margin:0;list-style:disc">${deskList}</ul>`:`<span style="color:#ccc;font-size:11px">—</span>`;
+        // Deskripsi — gunakan laporanItems jika ada, fallback ke deskripsi string
+        const laporanHtml=a.laporanItems?.length
+          ?a.laporanItems.map(l=>`<li style="font-size:11px;margin-bottom:3px"><strong>${l.jamMulai}–${l.jamSelesai}</strong>: ${l.uraian}</li>`).join('')
+          :(a.deskripsi?`<li style="font-size:11px">${a.deskripsi}</li>`:'');
+        const deskHtml=laporanHtml?`<ul style="padding-left:14px;margin:4px 0 0;list-style:disc">${laporanHtml}</ul>`:`<span style="color:#ccc;font-size:11px">—</span>`;
 
         // Kolom rekening pekerja (hanya di mode pekerja)
         const rekeningPkCell=mode==='pekerja'
@@ -1417,11 +1508,16 @@ function printRekap() {
           return`<td>${mark}/${a.hariKerja}</td>`;
         }).join('');
 
-        // Deskripsi list per tanggal (print)
-        const deskItems=recs.filter(a=>a.deskripsi).sort((a,b)=>a.tanggal.localeCompare(b.tanggal));
-        const deskHtml=deskItems.length
-          ?`<ul style="padding-left:10px;margin:0;font-size:8px;list-style:disc">${deskItems.map(a=>`<li><b>${formatTgl(a.tanggal).split(' ').slice(0,2).join(' ')}:</b> ${a.deskripsi}</li>`).join('')}</ul>`
-          :'—';
+        // Deskripsi list per tanggal — pakai laporanItems jika ada (print)
+        const deskItems=recs.filter(a=>a.deskripsi||a.laporanItems?.length).sort((a,b)=>a.tanggal.localeCompare(b.tanggal));
+        const deskInner=deskItems.map(a=>{
+          const tglLabel=formatTgl(a.tanggal).split(' ').slice(0,2).join(' ');
+          if(a.laporanItems?.length){
+            return`<li><b>${tglLabel}:</b><ul style="padding-left:8px">${a.laporanItems.map(l=>`<li>${l.jamMulai}–${l.jamSelesai}: ${l.uraian}</li>`).join('')}</ul></li>`;
+          }
+          return a.deskripsi?`<li><b>${tglLabel}:</b> ${a.deskripsi}</li>`:'';
+        }).filter(Boolean).join('');
+        const deskHtml=deskInner?`<ul style="padding-left:10px;margin:0;font-size:8px;list-style:disc">${deskInner}</ul>`:'—';
 
         rows+=`<tr>
           <td>${no++}</td>
@@ -1492,8 +1588,18 @@ function printRekap() {
 
   document.getElementById('print-area').innerHTML=`
     <div class="print-header">
-      <div class="co-name">KALIABANG</div>
-      <div class="co-sub">PT. Kaliabang Jaya Pratama</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:6px">
+        <svg width="36" height="36" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="4" width="13" height="32" fill="#C8102E"/>
+          <rect x="25" y="4" width="13" height="32" fill="#C8102E"/>
+          <rect x="15" y="16" width="10" height="20" fill="#C8102E"/>
+          <rect x="18" y="2" width="12" height="13" fill="#F5A800"/>
+        </svg>
+        <div style="text-align:left">
+          <div class="co-name" style="margin:0">KALIABANG</div>
+          <div class="co-sub" style="margin:0">PT. Kaliabang Jaya Pratama</div>
+        </div>
+      </div>
       <h1>REKAP UPAH PEKERJA HARIAN</h1>
       <p>${pr?.nama||'Semua Proyek'} &nbsp;|&nbsp; ${formatTgl(dari)} s/d ${formatTgl(sampai)}</p>
     </div>
