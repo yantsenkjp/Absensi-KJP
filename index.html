@@ -851,17 +851,42 @@ const APPS_SCRIPT_CODE = `// ═══ PT. Kaliabang Jaya Pratama — Apps Scrip
 const SS = SpreadsheetApp.getActiveSpreadsheet();
 
 // GET: form pekerja pakai ini untuk ambil data master
+// Mendukung JSONP (callback param) untuk bypass CORS di browser
 function doGet(e) {
-  const action = e && e.parameter && e.parameter.action;
+  const action   = e && e.parameter && e.parameter.action;
+  const callback = e && e.parameter && e.parameter.callback;
+
   if (action === 'get_master') {
     try {
-      const proyek  = sheetToArray('Proyek',  ['id','nama','lokasi','mandorId','smId','status']);
-      const mandor  = sheetToArray('Mandor',  ['id','nama','spesialis','hp']);
-      const pekerja = sheetToArray('Pekerja', ['id','nama','jabatan','upah','lembur']);
-      return out({ok:true, data:{proyek, mandor, pekerja}});
-    } catch(err) { return out({ok:false, error:err.toString()}); }
+      const proyek  = sheetToArray('Proyek');
+      const mandor  = sheetToArray('Mandor');
+      const pekerja = sheetToArray('Pekerja');
+      const result  = {ok:true, data:{proyek, mandor, pekerja}};
+      // JSONP: bungkus dalam fungsi callback jika ada
+      if (callback) {
+        return ContentService
+          .createTextOutput(callback + '(' + JSON.stringify(result) + ')')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return out(result);
+    } catch(err) {
+      const result = {ok:false, error:err.toString()};
+      if (callback) {
+        return ContentService
+          .createTextOutput(callback + '(' + JSON.stringify(result) + ')')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return out(result);
+    }
   }
-  return out({ok:true, result:'pong'});
+  // ping
+  const result = {ok:true, result:'pong'};
+  if (callback) {
+    return ContentService
+      .createTextOutput(callback + '(' + JSON.stringify(result) + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return out(result);
 }
 
 // POST: admin & form pekerja pakai ini untuk sync/simpan data
