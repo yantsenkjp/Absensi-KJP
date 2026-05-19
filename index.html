@@ -328,6 +328,7 @@ tr:hover td{background:#fafafa}
           </div>
           <div class="flex gap-8 mb-12" style="flex-wrap:wrap">
             <button class="btn btn-green btn-sm" onclick="approveAll()">✅ Approve Semua Pending</button>
+            <button class="btn btn-ghost btn-sm" onclick="refreshValidasi()">🔄 Refresh Data</button>
           </div>
           <div id="val-list"><div class="loading-full"><div class="spinner"></div></div></div>
         </div>
@@ -623,15 +624,49 @@ function apiPost(body, cb) {
 // ═══════════════════════════════════════════════════════
 // LOAD ALL DATA
 // ═══════════════════════════════════════════════════════
+function normStr(v) {
+  // Sheets bisa kembalikan Date object atau number — pastikan jadi string
+  if (v === null || v === undefined) return '';
+  if (v instanceof Date) return v.toISOString().split('T')[0];
+  return String(v);
+}
+function normAbsensi(arr) {
+  return (arr||[]).map(function(a) {
+    // Pastikan tanggal, masuk, pulang, status selalu string
+    a.tanggal   = normStr(a.tanggal);
+    a.masuk     = normStr(a.masuk);
+    a.pulang    = normStr(a.pulang);
+    a.status    = normStr(a.status)||'pending';
+    a.hariKerja = Number(a.hariKerja)||0;
+    a.lemburJam = Number(a.lemburJam)||0;
+    a.total     = Number(a.total)||0;
+    a.upahHarian= Number(a.upahHarian)||0;
+    a.upahLembur= Number(a.upahLembur)||0;
+    a.proyekId  = normStr(a.proyekId);
+    a.mandorId  = normStr(a.mandorId);
+    a.pekerjaId = normStr(a.pekerjaId);
+    return a;
+  });
+}
+function normMaster(arr) {
+  return (arr||[]).map(function(r) {
+    Object.keys(r).forEach(function(k) {
+      if (r[k] instanceof Date) r[k] = r[k].toISOString().split('T')[0];
+      else if (r[k] === null || r[k] === undefined) r[k] = '';
+    });
+    return r;
+  });
+}
+
 function loadAll(cb) {
   setBadge('load');
   apiGet({action:'get_all'}, function(res) {
     if (!res.ok) { setBadge('err'); if(cb) cb(false); return; }
-    DB.proyek  = res.data.proyek  || [];
-    DB.mandor  = res.data.mandor  || [];
-    DB.pekerja = res.data.pekerja || [];
-    DB.sm      = res.data.sm      || [];
-    DB.absensi = res.data.absensi || [];
+    DB.proyek  = normMaster(res.data.proyek);
+    DB.mandor  = normMaster(res.data.mandor);
+    DB.pekerja = normMaster(res.data.pekerja);
+    DB.sm      = normMaster(res.data.sm);
+    DB.absensi = normAbsensi(res.data.absensi);
     setBadge('ok');
     if (cb) cb(true);
   });
@@ -639,7 +674,7 @@ function loadAll(cb) {
 
 function loadAbsensi(cb) {
   apiGet({action:'get_absensi'}, function(res) {
-    if (res.ok) DB.absensi = res.data || [];
+    if (res.ok) DB.absensi = normAbsensi(res.data);
     if (cb) cb(res.ok);
   });
 }
@@ -929,30 +964,54 @@ function copyScript() {
 // DASHBOARD
 // ═══════════════════════════════════════════════════════
 function renderDashboard() {
+  // Selalu refresh data absensi dari Sheets untuk tampilan real-time
+  document.getElementById('dash-absensi').innerHTML = '<div class="loading-full"><div class="spinner"></div>Memuat data terbaru...</div>';
+  loadAbsensi(function() {
+    renderDashboardData();
+  });
+}
+
+function renderDashboardData() {
   var today = todayStr();
   var wk = getMinggu(today);
   var pending  = DB.absensi.filter(function(a){ return a.status==='pending'; }).length;
+  var approved = DB.absensi.filter(function(a){ return a.status==='approved'; }).length;
   var absenMggu= DB.absensi.filter(function(a){ return a.tanggal>=wk.start&&a.tanggal<=wk.end; }).length;
   document.getElementById('s-pending').textContent  = pending;
   document.getElementById('s-pekerja').textContent  = DB.pekerja.length;
   document.getElementById('s-proyek').textContent   = DB.proyek.filter(function(p){ return p.status==='aktif'; }).length;
   document.getElementById('s-absensi').textContent  = absenMggu;
 
-  var todayAbs = DB.absensi.filter(function(a){ return a.tanggal===today; })
-    .sort(function(a,b){ return b.createdAt.localeCompare(a.createdAt); })
-    .slice(0,10);
+  // Semua absensi hari ini, diurutkan terbaru di atas
+  var todayAbs = DB.absensi
+    .filter(function(a){ return a.tanggal===today; })
+    .sort(function(a,b){ return (b.createdAt||'').localeCompare(a.createdAt||''); });
 
   var el = document.getElementById('dash-absensi');
-  if (!todayAbs.length) { el.innerHTML='<div class="empty-state">Belum ada absensi hari ini</div>'; return; }
-  el.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Pekerja</th><th>Proyek</th><th>Jam</th><th>Hari</th><th>Status</th></tr></thead><tbody>'
+  var refreshBtn = '<div style="display:flex;justify-content:flex-end;margin-bottom:10px">'
+    +'<button class="btn btn-ghost btn-sm" onclick="renderDashboard()">🔄 Refresh</button></div>';
+
+  if (!todayAbs.length) {
+    el.innerHTML = refreshBtn+'<div class="empty-state">Belum ada absensi hari ini</div>';
+    return;
+  }
+  el.innerHTML = refreshBtn
+    + '<div class="table-wrap"><table><thead><tr>'
+    + '<th>Pekerja</th><th>Mandor</th><th>Proyek</th><th>Tanggal</th><th>Jam</th><th>Hari</th><th>Status</th>'
+    + '</tr></thead><tbody>'
     + todayAbs.map(function(a){
         var pk = DB.pekerja.find(function(p){ return String(p.id)===String(a.pekerjaId); })||{};
+        var mn = DB.mandor.find(function(m){  return String(m.id)===String(a.mandorId);  })||{};
         var pr = DB.proyek.find(function(p){  return String(p.id)===String(a.proyekId);  })||{};
-        return '<tr><td><strong>'+(pk.nama||'?')+'</strong><br><span class="text-sm text-gray">'+(pk.jabatan||'')+'</span></td>'
+        return '<tr>'
+          +'<td><strong>'+(pk.nama||'?')+'</strong><br><span class="text-sm text-gray">'+(pk.jabatan||'')+'</span></td>'
+          +'<td class="text-sm">'+(mn.nama||'?')+'</td>'
           +'<td class="text-sm">'+(pr.nama||'?')+'</td>'
+          +'<td class="text-sm">'+fmtTgl(a.tanggal)+'</td>'
           +'<td class="text-sm">'+a.masuk+' – '+a.pulang+'</td>'
-          +'<td class="text-sm">'+a.hariKerja+'</td>'
-          +'<td><span class="badge badge-'+a.status+'">'+a.status+'</span></td></tr>';
+          +'<td style="text-align:center;font-weight:700">'+a.hariKerja+'</td>'
+          +'<td><span class="badge badge-'+a.status+'">'+a.status+'</span></td>'
+          +'</tr>';
       }).join('')
     + '</tbody></table></div>';
 }
@@ -1092,11 +1151,13 @@ function simpanAbsensi() {
 
   apiPost({action:'post_absensi', row:row}, function(res){
     btn.disabled=false; btn.textContent='💾 Simpan Absensi';
-    if (res.ok) {
-      DB.absensi.push(row);
+    if (res.ok && res.result!=='duplicate') {
+      DB.absensi.push(normAbsensi([row])[0]);
       showAlert(elAlert,'success','✅ Absensi berhasil disimpan!');
       resetAbsensi();
       renderAbsensiHariIni();
+    } else if(res.result==='duplicate') {
+      showAlert(elAlert,'error','Absensi ini sudah ada di database!');
     } else {
       showAlert(elAlert,'error','Gagal: '+(res.error||'Unknown error'));
     }
@@ -1111,10 +1172,24 @@ function resetAbsensi() {
 }
 
 function renderAbsensiHariIni() {
+  var el = document.getElementById('list-absensi-hari-ini');
+  el.innerHTML='<div class="loading-full"><div class="spinner"></div></div>';
+  // Refresh dari Sheets agar data dari pekerja di lapangan juga muncul
   var today = todayStr();
-  var list  = DB.absensi.filter(function(a){ return a.tanggal===today; });
-  var el    = document.getElementById('list-absensi-hari-ini');
-  if (!list.length) { el.innerHTML='<div class="empty-state">Belum ada absensi hari ini</div>'; return; }
+  apiGet({action:'get_absensi', dari:today, sampai:today}, function(res){
+    if(res.ok) {
+      // Merge: tambahkan record dari Sheets yang belum ada di DB.absensi lokal
+      var sheetAbs = normAbsensi(res.data);
+      sheetAbs.forEach(function(sa){
+        if(!DB.absensi.find(function(a){return a.id===sa.id;})) DB.absensi.push(sa);
+        else {
+          var idx=DB.absensi.findIndex(function(a){return a.id===sa.id;});
+          if(idx>=0) DB.absensi[idx]=sa; // update status terbaru
+        }
+      });
+    }
+    var list = DB.absensi.filter(function(a){ return a.tanggal===today; });
+    if (!list.length) { el.innerHTML='<div class="empty-state">Belum ada absensi hari ini</div>'; return; }
   el.innerHTML='<div class="table-wrap"><table><thead><tr><th>Pekerja</th><th>Mandor</th><th>Proyek</th><th>Jam</th><th>Hari</th><th>Status</th><th></th></tr></thead><tbody>'
     +list.map(function(a){
       var pk=DB.pekerja.find(function(p){return String(p.id)===String(a.pekerjaId);})||{};
@@ -1129,6 +1204,7 @@ function renderAbsensiHariIni() {
         +'<td><button class="btn btn-sm btn-danger" onclick="hapusAbsensi(\''+a.id+'\')">🗑</button></td></tr>';
     }).join('')
     +'</tbody></table></div>';
+  }); // end apiGet callback
 }
 
 function hapusAbsensi(id) {
@@ -1147,8 +1223,19 @@ function hapusAbsensi(id) {
 function initValidasi() {
   document.getElementById('val-sm-sel').innerHTML = '<option value="">— Pilih SM —</option>'
     + DB.sm.map(function(s){ return '<option value="'+s.id+'">'+s.nama+'</option>'; }).join('');
-  document.getElementById('sm-login-panel').style.display='block';
-  document.getElementById('sm-validasi-panel').style.display='none';
+  document.getElementById('sm-login-panel').style.display = SM_LOGGED ? 'none' : 'block';
+  document.getElementById('sm-validasi-panel').style.display = SM_LOGGED ? 'block' : 'none';
+  if (SM_LOGGED) {
+    document.getElementById('sm-logged-name').textContent = SM_LOGGED.nama;
+    refreshValidasi();
+  }
+}
+
+function refreshValidasi() {
+  document.getElementById('val-list').innerHTML = '<div class="loading-full"><div class="spinner"></div>Memuat data...</div>';
+  loadAbsensi(function() {
+    renderValidasiList();
+  });
 }
 
 function loginSM() {
@@ -1298,13 +1385,32 @@ function getWeeks(dari, sampai) {
 }
 
 function tampilkanRekap() {
+  var el  = document.getElementById('rekap-result');
+  var tbl = document.getElementById('rekap-table');
+  el.style.display='block';
+  tbl.innerHTML='<div class="loading-full"><div class="spinner"></div>Memuat data dari Google Sheets...</div>';
+  // Selalu fetch ulang dari Sheets agar data selalu fresh
+  var dari   = getFieldVal('rek-dari');
+  var sampai = getFieldVal('rek-sampai');
+  var pid    = getFieldVal('rek-proyek');
+  var params = {action:'get_absensi'};
+  if(dari)   params.dari   = dari;
+  if(sampai) params.sampai = sampai;
+  if(pid)    params.proyekId = pid;
+  apiGet(params, function(res) {
+    if(res.ok) DB.absensi = normAbsensi(res.data);
+    renderRekapTable();
+  });
+}
+
+function renderRekapTable() {
   var data   = getRekapData();
   var el     = document.getElementById('rekap-result');
   var tbl    = document.getElementById('rekap-table');
   var dari   = getFieldVal('rek-dari');
   var sampai = getFieldVal('rek-sampai');
   el.style.display='block';
-  if (!data.length) { tbl.innerHTML='<div class="card empty-state">Tidak ada data</div>'; return; }
+  if (!data.length) { tbl.innerHTML='<div class="card empty-state">Tidak ada data absensi pada periode ini</div>'; return; }
   var mode = getBayarMode();
   var weeks = getWeeks(dari, sampai);
   var html=''; var grandTotal=0; var grandHari=0;
