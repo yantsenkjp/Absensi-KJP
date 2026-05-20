@@ -1374,10 +1374,13 @@ function renderValidasiList() {
   var el = document.getElementById('val-list');
 
   // Tab bar
+  var t1 = valFilter==="pending"  ? "btn-primary" : "btn-ghost";
+  var t2 = valFilter==="approved" ? "btn-primary" : "btn-ghost";
+  var t3 = valFilter==="all"      ? "btn-primary" : "btn-ghost";
   var tabs = '<div style="display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap">'
-    +'<button id="val-tab-pending" class="btn btn-sm val-tab '+(valFilter==="pending"?"btn-primary":"btn-ghost")+'" onclick="setValFilter('pending')">⏳ Pending ('+pendingCount+')</button>'
-    +'<button id="val-tab-approved" class="btn btn-sm val-tab '+(valFilter==="approved"?"btn-primary":"btn-ghost")+'" onclick="setValFilter('approved')">✅ Sudah Divalidasi</button>'
-    +'<button id="val-tab-all" class="btn btn-sm val-tab '+(valFilter==="all"?"btn-primary":"btn-ghost")+'" onclick="setValFilter('all')">📋 Semua</button>'
+    +'<button id="val-tab-pending"  class="btn btn-sm val-tab '+t1+'" onclick="setValFilter(this.dataset.f)" data-f="pending">⏳ Pending ('+pendingCount+')</button>'
+    +'<button id="val-tab-approved" class="btn btn-sm val-tab '+t2+'" onclick="setValFilter(this.dataset.f)" data-f="approved">✅ Sudah Divalidasi</button>'
+    +'<button id="val-tab-all"      class="btn btn-sm val-tab '+t3+'" onclick="setValFilter(this.dataset.f)" data-f="all">📋 Semua</button>'
     +'</div>';
 
   if(!list.length){
@@ -1409,19 +1412,20 @@ function renderValidasiList() {
 
     var stBadge = {pending:'badge-pending', approved:'badge-approved', rejected:'badge-rejected'};
 
-    // Aksi — REVISI 2: edit + ubah status, semua status bisa diedit
+    // Aksi — gunakan data-attribute untuk hindari quote conflict
+    var aid = String(a.id);
     var aksi = '<div style="display:flex;flex-direction:column;gap:4px">';
     if(a.status==='pending'){
-      aksi += '<button class="btn btn-sm btn-green" onclick="approveAbsensi(''+a.id+'')">✅ Approve</button>'
-            + '<button class="btn btn-sm btn-danger" onclick="rejectAbsensi(''+a.id+'')">❌ Tolak</button>';
+      aksi += '<button class="btn btn-sm btn-green" data-id="'+aid+'" onclick="approveAbsensi(this.dataset.id)">✅ Approve</button>'
+            + '<button class="btn btn-sm btn-danger" data-id="'+aid+'" onclick="rejectAbsensi(this.dataset.id)">❌ Tolak</button>';
     } else if(a.status==='approved'){
-      aksi += '<button class="btn btn-sm btn-danger" onclick="rejectAbsensi(''+a.id+'')">❌ Tolak</button>'
-            + '<button class="btn btn-sm btn-outline" onclick="setPending(''+a.id+'')">⏳ Pending</button>';
+      aksi += '<button class="btn btn-sm btn-danger" data-id="'+aid+'" onclick="rejectAbsensi(this.dataset.id)">❌ Tolak</button>'
+            + '<button class="btn btn-sm btn-outline" data-id="'+aid+'" onclick="setPending(this.dataset.id)">⏳ Pending</button>';
     } else {
-      aksi += '<button class="btn btn-sm btn-green" onclick="approveAbsensi(''+a.id+'')">✅ Approve</button>'
-            + '<button class="btn btn-sm btn-outline" onclick="setPending(''+a.id+'')">⏳ Pending</button>';
+      aksi += '<button class="btn btn-sm btn-green" data-id="'+aid+'" onclick="approveAbsensi(this.dataset.id)">✅ Approve</button>'
+            + '<button class="btn btn-sm btn-outline" data-id="'+aid+'" onclick="setPending(this.dataset.id)">⏳ Pending</button>';
     }
-    aksi += '<button class="btn btn-sm" style="background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe" onclick="editAbsensiSM(''+a.id+'')">✏️ Edit</button>';
+    aksi += '<button class="btn btn-sm" style="background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe" data-id="'+aid+'" onclick="editAbsensiSM(this.dataset.id)">✏️ Edit</button>';
     aksi += '</div>';
 
     return '<tr>'
@@ -1490,6 +1494,7 @@ function editAbsensiSM(id) {
   var pk = DB.pekerja.find(function(p){return String(p.id)===String(a.pekerjaId);})||{};
   var pr = DB.proyek.find(function(p){return String(p.id)===String(a.proyekId); })||{};
 
+  window._editSmId = id; // simpan id untuk simpanEditSM
   var existing = document.getElementById('modal-edit-sm');
   if(existing) existing.remove();
 
@@ -1515,7 +1520,7 @@ function editAbsensiSM(id) {
     +'</div>'
     +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid #f0f0f0">'
     +'<button class="btn btn-ghost" onclick="tutupModalEdit()">Batal</button>'
-    +'<button class="btn btn-primary" id="btn-simpan-edit" onclick="simpanEditSM(''+id+'')">💾 Simpan Perubahan</button>'
+    +'<button class="btn btn-primary" id="btn-simpan-edit" onclick="simpanEditSM(window._editSmId)">💾 Simpan Perubahan</button>'
     +'</div>'
     +'</div></div>';
 
@@ -1554,7 +1559,7 @@ function tambahLapEdit(mulai, selesai, uraian) {
   div.style.cssText = 'background:#f8faff;border:1.5px solid #dbeafe;border-radius:10px;padding:12px;margin-bottom:8px';
   div.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
     +'<span style="font-size:12px;font-weight:700;color:#1d4ed8">Laporan #'+window._editLapCount+'</span>'
-    +(window._editLapCount>1?'<button onclick="this.closest('[id^=elap]').remove()" style="background:#fee2e2;border:none;border-radius:6px;padding:3px 10px;font-size:12px;color:#dc2626;cursor:pointer">✕ Hapus</button>':'')
+    +(window._editLapCount>1?'<button onclick="hapusLapEditItem(this)" style="background:#fee2e2;border:none;border-radius:6px;padding:3px 10px;font-size:12px;color:#dc2626;cursor:pointer">✕ Hapus</button>':'')
     +'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
     +'<div class="fg"><label style="font-size:11px">Jam Mulai</label><input type="time" id="'+id+'-mulai" value="'+(mulai||'08:00')+'"></div>'
@@ -1566,6 +1571,7 @@ function tambahLapEdit(mulai, selesai, uraian) {
 }
 
 function simpanEditSM(id) {
+  id = id || window._editSmId;
   var a = DB.absensi.find(function(x){ return x.id===id; });
   if(!a) return;
   var masuk  = (document.getElementById('edit-masuk') ||{}).value || a.masuk;
@@ -1608,6 +1614,8 @@ function simpanEditSM(id) {
     }
   });
 }
+
+function hapusLapEditItem(btn) { var p=btn.parentElement; if(p) p.remove(); }
 
 function tutupModalEdit() {
   var m=document.getElementById('modal-edit-sm');
