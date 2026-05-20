@@ -599,8 +599,8 @@ function apiGet(params, cb) {
   var qs = Object.keys(params).map(function(k){ return k+'='+encodeURIComponent(params[k]); }).join('&');
   var el = document.createElement('script');
   var timer = setTimeout(function(){
-    cleanup(); cb({ok:false, error:'Timeout (15s). Cek koneksi internet.'});
-  }, 15000);
+    cleanup(); cb({ok:false, error:'Timeout. Pastikan Apps Script sudah di-deploy ulang dengan kode terbaru.'});
+  }, 8000);
   window[cbName] = function(data){ cleanup(); cb(data); };
   el.onerror = function(){ cleanup(); cb({ok:false, error:'Network error'}); };
   el.src = GS_URL+'?'+qs+'&callback='+cbName;
@@ -613,8 +613,8 @@ function apiPost(body, cb) {
   var cbName = '_kjpw'+Date.now()+Math.floor(Math.random()*9999);
   var el = document.createElement('script');
   var timer = setTimeout(function(){
-    cleanup(); cb({ok:false, error:'Timeout. Cek koneksi.'});
-  }, 20000);
+    cleanup(); cb({ok:false, error:'Timeout saat menyimpan.'});
+  }, 12000);
   window[cbName] = function(data){ cleanup(); cb(data); };
   el.onerror = function(){ cleanup(); cb({ok:false, error:'Network error'}); };
   var qs = 'payload='+encodeURIComponent(JSON.stringify(body))+'&callback='+cbName;
@@ -666,14 +666,24 @@ function normMaster(arr) {
 function loadAll(cb) {
   setBadge('load');
   apiGet({action:'get_all'}, function(res) {
-    if (!res.ok) { setBadge('err'); if(cb) cb(false); return; }
-    DB.proyek  = normMaster(res.data.proyek);
-    DB.mandor  = normMaster(res.data.mandor);
-    DB.pekerja = normMaster(res.data.pekerja);
-    DB.sm      = normMaster(res.data.sm);
-    DB.absensi = normAbsensi(res.data.absensi);
-    setBadge('ok');
-    if (cb) cb(true);
+    if (!res.ok) {
+      setBadge('err');
+      document.getElementById('conn-badge').textContent = '✕ Gagal';
+      if(cb) cb(false, res.error||'Gagal terhubung');
+      return;
+    }
+    try {
+      DB.proyek  = normMaster(res.data.proyek);
+      DB.mandor  = normMaster(res.data.mandor);
+      DB.pekerja = normMaster(res.data.pekerja);
+      DB.sm      = normMaster(res.data.sm);
+      DB.absensi = normAbsensi(res.data.absensi);
+      setBadge('ok');
+      if(cb) cb(true);
+    } catch(e) {
+      setBadge('err');
+      if(cb) cb(false, 'Data tidak valid: '+e.toString());
+    }
   });
 }
 
@@ -939,16 +949,30 @@ function testKoneksi() {
   GS_URL = url;
   apiGet({action:'ping'}, function(res) {
     if (res.ok) {
-      showAlert('alert-settings','success','✅ Koneksi berhasil! Memuat data...');
-      loadAll(function(ok) {
+      showAlert('alert-settings','success','✅ Koneksi berhasil! Memuat semua data...');
+      loadAll(function(ok, errMsg) {
         if (ok) {
-          goto('dashboard');
+          showAlert('alert-settings','success','✅ Data berhasil dimuat! Membuka Dashboard...');
+          setTimeout(function(){ goto('dashboard'); }, 1000);
         } else {
-          showAlert('alert-settings','error','Koneksi OK tapi gagal memuat data. Pastikan sheet sudah ada.');
+          showAlert('alert-settings','error','Koneksi OK tapi gagal muat data: '+(errMsg||'Error')
+            +'. Pastikan sheet sudah ada dan Apps Script sudah di-deploy ulang.');
         }
       });
     } else {
-      showAlert('alert-settings','error','❌ Gagal: '+res.error+'. Pastikan Apps Script sudah di-deploy dengan benar (Who has access: Anyone).');
+      var errDetail = res.error || 'Unknown';
+      var hint = '';
+      if (errDetail.indexOf('Timeout') >= 0 || errDetail.indexOf('Network') >= 0) {
+        hint = '<br><br><strong>Kemungkinan penyebab:</strong><ul style="margin:6px 0 0 16px;line-height:2">'
+          + '<li>Apps Script belum di-redeploy — buka Google Sheets → Extensions → Apps Script → Deploy → Manage Deployments → Edit → New Version → Deploy</li>'
+          + '<li>Opsi "Who has access" bukan <strong>Anyone</strong></li>'
+          + '<li>Kode Apps Script belum diupdate (perlu paste kode terbaru dari bawah)</li>'
+          + '<li>Koneksi internet bermasalah</li>'
+          + '</ul>';
+      }
+      var alertEl = document.getElementById('alert-settings');
+      alertEl.className = 'alert alert-error show';
+      alertEl.innerHTML = '❌ Gagal: ' + errDetail + hint;
     }
   });
 }
@@ -2146,24 +2170,44 @@ setInterval(updateClock,60000); updateClock();
 // Tampilkan kode script
 document.getElementById('script-display').textContent = SCRIPT_CODE;
 
-// REVISI 3: Baca URL dari localStorage saat startup
+// ── STARTUP ──
+// Tampilkan halaman loading dulu sementara koneksi dicoba
+updateClock();
+
+// Baca URL dari localStorage
 try { GS_URL = localStorage.getItem(LS_URL)||''; } catch(e){}
 
 if (GS_URL) {
   document.getElementById('gs-url-input').value = GS_URL;
+  // Tampilkan settings dengan status menghubungkan — jangan goto dashboard dulu
+  goto('settings');
+  tampilSavedUrl();
   setBadge('load');
-  loadAll(function(ok){
-    if(ok) {
+  document.getElementById('conn-badge').textContent = '⏳ Menghubungkan...';
+  showAlert('alert-settings', 'info', '⏳ Menghubungkan ke Google Sheets...');
+
+  loadAll(function(ok, errMsg){
+    if (ok) {
+      // Sukses — baru masuk ke dashboard
       goto('dashboard');
     } else {
-      goto('settings');
-      showAlert('alert-settings','error','Gagal terhubung dengan URL tersimpan. Cek koneksi internet atau perbarui URL.');
+      // Gagal — tetap di settings dengan pesan error detail
+      setBadge('err');
+      var msg = errMsg || 'Gagal terhubung';
+      var hint = '';
+      if (msg.indexOf('Timeout') >= 0 || msg.indexOf('Network') >= 0) {
+        hint = ' — Kemungkinan: (1) Apps Script belum di-redeploy dengan kode terbaru, '
+             + '(2) koneksi internet bermasalah, atau (3) URL salah. '
+             + 'Coba Test Koneksi atau paste URL ulang.';
+      }
+      showAlert('alert-settings', 'error', '❌ ' + msg + hint);
     }
   });
+
 } else {
   goto('settings');
   setBadge('err');
-  document.getElementById('conn-badge').textContent='⚙ Belum dikonfigurasi';
+  document.getElementById('conn-badge').textContent = '⚙ Belum dikonfigurasi';
 }
 </script>
 </body>
