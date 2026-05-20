@@ -595,16 +595,50 @@ function goto(page) {
 // ═══════════════════════════════════════════════════════
 function apiGet(params, cb) {
   if (!GS_URL) { cb({ok:false, error:'URL belum dikonfigurasi'}); return; }
+  var called = false;
   var cbName = '_kjp'+Date.now()+Math.floor(Math.random()*9999);
   var qs = Object.keys(params).map(function(k){ return k+'='+encodeURIComponent(params[k]); }).join('&');
   var el = document.createElement('script');
+
+  // Timeout PASTI berjalan setelah 8 detik
   var timer = setTimeout(function(){
-    cleanup(); cb({ok:false, error:'Timeout. Pastikan Apps Script sudah di-deploy ulang dengan kode terbaru.'});
+    if(called) return;
+    called = true;
+    cleanup();
+    cb({ok:false, error:'Timeout 8s — Apps Script belum diupdate/redeploy, atau URL salah.'});
   }, 8000);
-  window[cbName] = function(data){ cleanup(); cb(data); };
-  el.onerror = function(){ cleanup(); cb({ok:false, error:'Network error'}); };
+
+  window[cbName] = function(data){
+    if(called) return;
+    called = true;
+    cleanup();
+    cb(data);
+  };
+
+  el.onload = function(){
+    // Script loaded tapi callback belum dipanggil dalam 1 detik = Apps Script lama (tidak support JSONP)
+    setTimeout(function(){
+      if(!called){
+        called = true;
+        cleanup();
+        cb({ok:false, error:'Script dimuat tapi tidak ada respons — Apps Script perlu diupdate dan di-redeploy dengan kode terbaru.'});
+      }
+    }, 1000);
+  };
+
+  el.onerror = function(){
+    if(called) return;
+    called = true;
+    cleanup();
+    cb({ok:false, error:'Gagal memuat script — cek URL dan koneksi internet.'});
+  };
+
   el.src = GS_URL+'?'+qs+'&callback='+cbName;
-  function cleanup(){ clearTimeout(timer); delete window[cbName]; if(el.parentNode) el.parentNode.removeChild(el); }
+  function cleanup(){
+    clearTimeout(timer);
+    delete window[cbName];
+    if(el.parentNode) el.parentNode.removeChild(el);
+  }
   document.head.appendChild(el);
 }
 
@@ -2179,28 +2213,35 @@ try { GS_URL = localStorage.getItem(LS_URL)||''; } catch(e){}
 
 if (GS_URL) {
   document.getElementById('gs-url-input').value = GS_URL;
-  // Tampilkan settings dengan status menghubungkan — jangan goto dashboard dulu
   goto('settings');
   tampilSavedUrl();
   setBadge('load');
   document.getElementById('conn-badge').textContent = '⏳ Menghubungkan...';
-  showAlert('alert-settings', 'info', '⏳ Menghubungkan ke Google Sheets...');
+
+  var alertEl = document.getElementById('alert-settings');
+  alertEl.className = 'alert alert-info show';
+  alertEl.innerHTML = '⏳ Menghubungkan ke Google Sheets...<br>'
+    + '<small style="color:#555">Jika lebih dari 10 detik, klik <strong>Test Koneksi</strong> untuk melihat detail error.</small>';
 
   loadAll(function(ok, errMsg){
     if (ok) {
-      // Sukses — baru masuk ke dashboard
       goto('dashboard');
     } else {
-      // Gagal — tetap di settings dengan pesan error detail
       setBadge('err');
       var msg = errMsg || 'Gagal terhubung';
-      var hint = '';
-      if (msg.indexOf('Timeout') >= 0 || msg.indexOf('Network') >= 0) {
-        hint = ' — Kemungkinan: (1) Apps Script belum di-redeploy dengan kode terbaru, '
-             + '(2) koneksi internet bermasalah, atau (3) URL salah. '
-             + 'Coba Test Koneksi atau paste URL ulang.';
-      }
-      showAlert('alert-settings', 'error', '❌ ' + msg + hint);
+      var alertEl2 = document.getElementById('alert-settings');
+      alertEl2.className = 'alert alert-error show';
+      alertEl2.innerHTML = '<strong>❌ Gagal terhubung</strong><br><br>'
+        + '<strong>Pesan:</strong> ' + msg + '<br><br>'
+        + '<strong>Solusi yang harus dilakukan:</strong>'
+        + '<ol style="margin:8px 0 0 16px;line-height:2.2">'
+        + '<li>Buka Google Sheets → <strong>Extensions → Apps Script</strong></li>'
+        + '<li>Pilih semua kode → Delete → Paste kode dari tombol <strong>Copy Kode</strong> di bawah</li>'
+        + '<li>Klik <strong>Ctrl+S</strong> untuk save</li>'
+        + '<li>Klik <strong>Deploy → Manage Deployments → Edit (✏️) → New Version → Deploy</strong></li>'
+        + '<li>Pastikan <strong>Who has access: Anyone</strong></li>'
+        + '<li>Kembali ke sini → klik <strong>Test Koneksi</strong></li>'
+        + '</ol>';
     }
   });
 
