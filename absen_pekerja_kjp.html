@@ -602,7 +602,7 @@ function simpan(){
   apiPost({action:'post_absensi', row:row}, function(res){
     btn.disabled=false; btn.textContent='💾 Simpan Absensi';
     if(res.ok && res.result!=='duplicate'){
-      RIWAYAT.push(row);
+      RIWAYAT.push(normAbsensiPk([row])[0]);
       showAlert('alert-main','✅ Absensi berhasil disimpan dan terkirim ke Google Sheets!','ok');
       initLap(); mediaFiles=[]; renderMedia();
       document.getElementById('f-files').value='';
@@ -627,12 +627,48 @@ function switchTab(tab){
 }
 
 // ── RIWAYAT (fetch langsung dari Sheets) ──
+function normTgl(v) {
+  if (!v) return '';
+  if (typeof v === 'string') {
+    // Jika format ISO datetime, ambil tanggal saja
+    if (v.length > 10 && v.indexOf('T') > 0) return v.split('T')[0];
+    // Jika format 1899-12-30 (jam dari Sheets), kembalikan string jam
+    if (v.startsWith('1899-12-30')) {
+      var t = new Date(v);
+      return pad(t.getHours())+':'+pad(t.getMinutes());
+    }
+    return v;
+  }
+  if (v instanceof Date) {
+    var y=v.getFullYear(), m=v.getMonth()+1, d=v.getDate();
+    if (y < 1901) return pad(v.getHours())+':'+pad(v.getMinutes()); // jam
+    return y+'-'+pad(m)+'-'+pad(d);
+  }
+  return String(v);
+}
+
+function normAbsensiPk(arr) {
+  return (arr||[]).map(function(a) {
+    a.tanggal    = normTgl(a.tanggal);
+    a.masuk      = normTgl(a.masuk);
+    a.pulang     = normTgl(a.pulang);
+    a.status     = String(a.status||'pending');
+    a.hariKerja  = Number(a.hariKerja)||0;
+    a.lemburJam  = Number(a.lemburJam)||0;
+    a.total      = Number(a.total)||0;
+    a.proyekId   = String(a.proyekId||'');
+    a.mandorId   = String(a.mandorId||'');
+    a.pekerjaId  = String(a.pekerjaId||'');
+    return a;
+  });
+}
+
 function muatRiwayat(){
   var per=getMinggu(todayStr());
   document.getElementById('riwayat-list').innerHTML='<div class="empty"><div class="ico">⏳</div>Memuat riwayat...</div>';
   apiGet({action:'get_absensi',dari:per.start,sampai:per.end}, function(res){
     if(!res.ok){ document.getElementById('riwayat-list').innerHTML='<div class="empty">Gagal memuat: '+res.error+'</div>'; return; }
-    RIWAYAT = res.data||[];
+    RIWAYAT = normAbsensiPk(res.data);
     renderWeek();
     renderRiwayat();
   });
