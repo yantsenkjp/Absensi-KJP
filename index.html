@@ -206,8 +206,12 @@ tr:hover td{background:#fafafa}
       <div class="card" style="max-width:560px">
         <div class="card-title">⚙️ Konfigurasi Google Sheets</div>
         <div class="alert" id="alert-settings"></div>
+        <div id="saved-url-info" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#166534">
+          ✅ URL tersimpan: <strong id="saved-url-text" style="font-size:11px;word-break:break-all"></strong>
+          <button onclick="hapusSimpanUrl()" class="btn btn-sm btn-danger" style="margin-left:8px;padding:2px 8px">Hapus</button>
+        </div>
         <p style="font-size:13px;color:#666;margin-bottom:14px;line-height:1.6">
-          Masukkan URL Google Apps Script yang sudah di-deploy. URL didapat setelah deploy Apps Script dari Google Sheets.
+          Masukkan URL Google Apps Script yang sudah di-deploy. URL akan tersimpan permanen di browser ini.
         </p>
         <div class="fg mb-12">
           <label>URL Google Apps Script</label>
@@ -580,7 +584,8 @@ function goto(page) {
     pekerja: renderPekerja,
     mandor: renderMandor,
     sm: renderSM,
-    proyek: renderProyek
+    proyek: renderProyek,
+    settings: tampilSavedUrl
   };
   if (fn[page]) fn[page]();
 }
@@ -917,10 +922,14 @@ var SCRIPT_CODE = [
 
 function simpanUrl() {
   var url = getFieldVal('gs-url-input');
-  if (!url || !url.startsWith('http')) { showAlert('alert-settings','error','URL tidak valid'); return; }
+  if (!url || !url.startsWith('http')) { showAlert('alert-settings','error','URL tidak valid. Harus dimulai dengan https://'); return; }
   GS_URL = url;
-  try { localStorage.setItem(LS_URL, url); } catch(e){}
-  showAlert('alert-settings','info','Menghubungkan...');
+  try {
+    localStorage.setItem(LS_URL, url);
+  } catch(e) {
+    showAlert('alert-settings','warn','Peringatan: Tidak dapat menyimpan URL di browser ini');
+  }
+  showAlert('alert-settings','info','⏳ Menghubungkan ke Google Sheets...');
   testKoneksi();
 }
 
@@ -942,6 +951,26 @@ function testKoneksi() {
       showAlert('alert-settings','error','❌ Gagal: '+res.error+'. Pastikan Apps Script sudah di-deploy dengan benar (Who has access: Anyone).');
     }
   });
+}
+
+function hapusSimpanUrl() {
+  if(!confirm('Hapus URL tersimpan? Anda harus input ulang URL berikutnya.')) return;
+  try { localStorage.removeItem(LS_URL); } catch(e){}
+  GS_URL = '';
+  document.getElementById('gs-url-input').value = '';
+  document.getElementById('saved-url-info').style.display = 'none';
+  setBadge('err');
+  document.getElementById('conn-badge').textContent = '⚙ Belum dikonfigurasi';
+  showAlert('alert-settings','info','URL berhasil dihapus. Masukkan URL baru untuk terhubung.');
+}
+
+function tampilSavedUrl() {
+  var el  = document.getElementById('saved-url-info');
+  var txt = document.getElementById('saved-url-text');
+  if(!el||!txt) return;
+  var saved = GS_URL || (function(){ try{return localStorage.getItem(LS_URL)||'';}catch(e){return '';} })();
+  if(saved){ el.style.display='block'; txt.textContent=saved; }
+  else el.style.display='none';
 }
 
 function copyScript() {
@@ -1259,40 +1288,107 @@ function logoutSM() {
   setFieldVal('val-pin','');
 }
 
+var valFilter = 'pending';
+
+function setValFilter(f) {
+  valFilter = f;
+  document.querySelectorAll('.val-tab').forEach(function(t){ t.classList.remove('btn-primary'); t.classList.add('btn-ghost'); });
+  var active = document.getElementById('val-tab-'+f);
+  if(active){ active.classList.remove('btn-ghost'); active.classList.add('btn-primary'); }
+  renderValidasiList();
+}
+
 function renderValidasiList() {
-  // SM hanya lihat proyek yang diawasi
-  var proyekIds = SM_LOGGED.proyekIds ? String(SM_LOGGED.proyekIds).split(',').map(function(s){return s.trim();}) : [];
-  var list = DB.absensi.filter(function(a){
-    return a.status==='pending' && (proyekIds.length===0 || proyekIds.indexOf(String(a.proyekId))>=0);
-  }).sort(function(a,b){ return b.createdAt.localeCompare(a.createdAt); });
+  var proyekIds = SM_LOGGED && SM_LOGGED.proyekIds
+    ? String(SM_LOGGED.proyekIds).split(',').map(function(s){return s.trim();}).filter(Boolean)
+    : [];
+
+  var allInScope = DB.absensi.filter(function(a){
+    return proyekIds.length===0 || proyekIds.indexOf(String(a.proyekId))>=0;
+  });
+  var pendingCount = allInScope.filter(function(a){ return a.status==='pending'; }).length;
+
+  var list = allInScope.filter(function(a){
+    if(valFilter==='pending')  return a.status==='pending';
+    if(valFilter==='approved') return a.status==='approved'||a.status==='rejected';
+    return true;
+  }).sort(function(a,b){ return (b.tanggal+b.masuk).localeCompare(a.tanggal+a.masuk); });
 
   var el = document.getElementById('val-list');
-  if (!list.length) { el.innerHTML='<div class="empty-state">✅ Tidak ada absensi pending</div>'; return; }
 
-  el.innerHTML = '<div class="table-wrap"><table><thead><tr>'
-    +'<th>Pekerja</th><th>Mandor</th><th>Proyek</th><th>Tanggal</th><th>Jam</th><th>Hari</th><th>Laporan</th><th>Aksi</th>'
-    +'</tr></thead><tbody>'
-    + list.map(function(a){
-        var pk=DB.pekerja.find(function(p){return String(p.id)===String(a.pekerjaId);})||{};
-        var mn=DB.mandor.find(function(m){return String(m.id)===String(a.mandorId);})||{};
-        var pr=DB.proyek.find(function(p){return String(p.id)===String(a.proyekId);})||{};
-        var laps='';
-        try{var li=JSON.parse(a.laporanItems||'[]');laps=li.map(function(l){return'<div class="text-sm">'+l.jamMulai+'-'+l.jamSelesai+': '+l.uraian+'</div>';}).join('');}catch(e){laps=a.deskripsi||'';}
-        return '<tr>'
-          +'<td><strong>'+(pk.nama||'?')+'</strong><br><span class="text-sm text-gray">'+(pk.jabatan||'')+'</span></td>'
-          +'<td class="text-sm">'+(mn.nama||'?')+'</td>'
-          +'<td class="text-sm">'+(pr.nama||'?')+'</td>'
-          +'<td class="text-sm">'+fmtTgl(a.tanggal)+'</td>'
-          +'<td class="text-sm">'+a.masuk+'-'+a.pulang+'</td>'
-          +'<td class="text-sm">'+a.hariKerja+'</td>'
-          +'<td style="max-width:180px">'+laps+'</td>'
-          +'<td><div class="flex gap-8">'
-            +'<button class="btn btn-sm btn-green" onclick="approveAbsensi(\''+a.id+'\')">✅ Approve</button>'
-            +'<button class="btn btn-sm btn-danger" onclick="rejectAbsensi(\''+a.id+'\')">❌ Tolak</button>'
-          +'</div></td></tr>';
-      }).join('')
-    + '</tbody></table></div>';
+  // Tab bar
+  var tabs = '<div style="display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap">'
+    +'<button id="val-tab-pending" class="btn btn-sm val-tab '+(valFilter==="pending"?"btn-primary":"btn-ghost")+'" onclick="setValFilter('pending')">⏳ Pending ('+pendingCount+')</button>'
+    +'<button id="val-tab-approved" class="btn btn-sm val-tab '+(valFilter==="approved"?"btn-primary":"btn-ghost")+'" onclick="setValFilter('approved')">✅ Sudah Divalidasi</button>'
+    +'<button id="val-tab-all" class="btn btn-sm val-tab '+(valFilter==="all"?"btn-primary":"btn-ghost")+'" onclick="setValFilter('all')">📋 Semua</button>'
+    +'</div>';
+
+  if(!list.length){
+    el.innerHTML = tabs + '<div class="empty-state">Tidak ada data ' + valFilter + '</div>';
+    return;
+  }
+
+  var rows = list.map(function(a){
+    var pk=DB.pekerja.find(function(p){return String(p.id)===String(a.pekerjaId);})||{};
+    var mn=DB.mandor.find(function(m){return String(m.id)===String(a.mandorId);})||{};
+    var pr=DB.proyek.find(function(p){return String(p.id)===String(a.proyekId);})||{};
+
+    // Laporan pekerjaan — REVISI 1
+    var lapsHtml = '<span style="color:#ccc;font-size:11px">—</span>';
+    try {
+      var li = JSON.parse(a.laporanItems||'[]');
+      if(li.length) {
+        lapsHtml = '<div style="display:flex;flex-direction:column;gap:3px">'
+          + li.map(function(l){
+              return '<div style="font-size:11px;padding:3px 6px;background:#f0fdf4;border-left:2px solid #22c55e;border-radius:0 4px 4px 0">'
+                +'<strong>'+l.jamMulai+'–'+l.jamSelesai+'</strong>: '+l.uraian+'</div>';
+            }).join('') + '</div>';
+      } else if(a.deskripsi) {
+        lapsHtml = '<div style="font-size:11px">'+a.deskripsi+'</div>';
+      }
+    } catch(e) {
+      lapsHtml = a.deskripsi ? '<div style="font-size:11px">'+a.deskripsi+'</div>' : '—';
+    }
+
+    var stBadge = {pending:'badge-pending', approved:'badge-approved', rejected:'badge-rejected'};
+
+    // Aksi — REVISI 2: edit + ubah status, semua status bisa diedit
+    var aksi = '<div style="display:flex;flex-direction:column;gap:4px">';
+    if(a.status==='pending'){
+      aksi += '<button class="btn btn-sm btn-green" onclick="approveAbsensi(''+a.id+'')">✅ Approve</button>'
+            + '<button class="btn btn-sm btn-danger" onclick="rejectAbsensi(''+a.id+'')">❌ Tolak</button>';
+    } else if(a.status==='approved'){
+      aksi += '<button class="btn btn-sm btn-danger" onclick="rejectAbsensi(''+a.id+'')">❌ Tolak</button>'
+            + '<button class="btn btn-sm btn-outline" onclick="setPending(''+a.id+'')">⏳ Pending</button>';
+    } else {
+      aksi += '<button class="btn btn-sm btn-green" onclick="approveAbsensi(''+a.id+'')">✅ Approve</button>'
+            + '<button class="btn btn-sm btn-outline" onclick="setPending(''+a.id+'')">⏳ Pending</button>';
+    }
+    aksi += '<button class="btn btn-sm" style="background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe" onclick="editAbsensiSM(''+a.id+'')">✏️ Edit</button>';
+    aksi += '</div>';
+
+    return '<tr>'
+      +'<td><strong>'+(pk.nama||'?')+'</strong><br><span class="text-sm text-gray">'+(pk.jabatan||'')+'</span></td>'
+      +'<td class="text-sm">'+(mn.nama||'?')+'<br><span class="text-sm text-gray">'+(pr.nama||'?')+'</span></td>'
+      +'<td class="text-sm" style="white-space:nowrap">'+fmtTgl(a.tanggal)+'</td>'
+      +'<td class="text-sm" style="white-space:nowrap">'+a.masuk+'–'+a.pulang+'<br>'
+        +'<span style="color:#888;font-size:11px">'+a.hariKerja+' hari'+(Number(a.lemburJam)>0?' + '+Number(a.lemburJam).toFixed(1)+'j lbr':'')+'</span></td>'
+      +'<td style="max-width:200px;min-width:140px">'+lapsHtml+'</td>'
+      +'<td><span class="badge '+(stBadge[a.status]||'badge-pending')+'">'+a.status+'</span>'
+        +(a.catatanReject?'<br><span style="font-size:10px;color:#991b1b">'+a.catatanReject+'</span>':'')
+        +(a.approvedBy?'<br><span style="font-size:10px;color:#888">oleh '+a.approvedBy+'</span>':'')
+      +'</td>'
+      +'<td>'+aksi+'</td>'
+      +'</tr>';
+  }).join('');
+
+  el.innerHTML = tabs
+    + '<div class="table-wrap"><table><thead><tr>'
+    + '<th>Pekerja</th><th>Mandor/Proyek</th><th>Tanggal</th><th>Jam & Durasi</th>'
+    + '<th style="min-width:160px">Laporan Pekerjaan</th><th>Status</th><th>Aksi</th>'
+    + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
 }
+
 
 function updateAbsensiStatus(id, status, catatan) {
   var a = DB.absensi.find(function(x){ return x.id===id; });
@@ -1314,9 +1410,151 @@ function updateAbsensiStatus(id, status, catatan) {
 function approveAbsensi(id) { updateAbsensiStatus(id,'approved',''); }
 
 function rejectAbsensi(id) {
-  var catatan = prompt('Alasan penolakan:');
+  var catatan = prompt('Alasan penolakan (opsional):');
   if (catatan===null) return;
-  updateAbsensiStatus(id,'rejected',catatan);
+  updateAbsensiStatus(id,'rejected',catatan||'Ditolak oleh '+SM_LOGGED.nama);
+}
+
+function setPending(id) {
+  if (!confirm('Set absensi ini kembali ke pending?')) return;
+  var a=DB.absensi.find(function(x){return x.id===id;});
+  if(!a) return;
+  a.status='pending'; a.approvedBy=''; a.approvedAt=''; a.catatanReject='';
+  apiPost({action:'update_absensi',row:a},function(res){
+    if(res.ok) renderValidasiList();
+    else { alert('Gagal: '+res.error); loadAbsensi(renderValidasiList); }
+  });
+}
+
+// ── MODAL EDIT ABSENSI (REVISI 2) ──
+function editAbsensiSM(id) {
+  var a  = DB.absensi.find(function(x){ return x.id===id; });
+  if(!a) return;
+  var pk = DB.pekerja.find(function(p){return String(p.id)===String(a.pekerjaId);})||{};
+  var pr = DB.proyek.find(function(p){return String(p.id)===String(a.proyekId); })||{};
+
+  var existing = document.getElementById('modal-edit-sm');
+  if(existing) existing.remove();
+
+  var html = '<div id="modal-edit-sm" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:16px">'
+    +'<div style="background:#fff;border-radius:14px;padding:22px;width:100%;max-width:580px;max-height:92vh;overflow-y:auto">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">'
+    +'<h3 style="font-size:15px;font-weight:700">✏️ Edit Absensi</h3>'
+    +'<button onclick="tutupModalEdit()" style="background:none;border:none;font-size:26px;cursor:pointer;color:#999;line-height:1">×</button>'
+    +'</div>'
+    +'<div style="font-size:12px;color:#888;margin-bottom:16px">'+pk.nama+' · '+pr.nama+' · '+fmtTgl(a.tanggal)+'</div>'
+    +'<div class="alert" id="alert-edit-sm"></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">'
+    +'<div class="fg"><label>Jam Masuk</label><input type="time" id="edit-masuk" value="'+a.masuk+'" onchange="hitungEditSM()"></div>'
+    +'<div class="fg"><label>Jam Pulang</label><input type="time" id="edit-pulang" value="'+a.pulang+'" onchange="hitungEditSM()"></div>'
+    +'</div>'
+    +'<div class="alert alert-info show" id="edit-kalk" style="margin-bottom:14px;font-size:13px"></div>'
+    +'<div style="margin-bottom:14px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+    +'<label style="font-size:12px;font-weight:700;color:#555">Laporan Pekerjaan</label>'
+    +'<button onclick="tambahLapEdit()" class="btn btn-outline btn-sm">+ Tambah</button>'
+    +'</div>'
+    +'<div id="edit-lap-wrap"></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid #f0f0f0">'
+    +'<button class="btn btn-ghost" onclick="tutupModalEdit()">Batal</button>'
+    +'<button class="btn btn-primary" id="btn-simpan-edit" onclick="simpanEditSM(''+id+'')">💾 Simpan Perubahan</button>'
+    +'</div>'
+    +'</div></div>';
+
+  document.body.insertAdjacentHTML('beforeend', html);
+  window._editLapCount = 0;
+
+  // Isi laporan
+  var laps=[];
+  try{ laps=JSON.parse(a.laporanItems||'[]'); }catch(e){}
+  if(a.deskripsi && !laps.length) laps=[{jamMulai:a.masuk,jamSelesai:a.pulang,uraian:a.deskripsi}];
+  if(!laps.length) laps=[{jamMulai:a.masuk,jamSelesai:a.pulang,uraian:''}];
+  laps.forEach(function(l){ tambahLapEdit(l.jamMulai,l.jamSelesai,l.uraian); });
+  hitungEditSM();
+}
+
+function hitungEditSM() {
+  var masuk  = (document.getElementById('edit-masuk') ||{}).value||'';
+  var pulang = (document.getElementById('edit-pulang')||{}).value||'';
+  var el     = document.getElementById('edit-kalk');
+  if(!el||!masuk||!pulang) return;
+  var d = toMnt(pulang)-toMnt(masuk);
+  if(d<=0){ el.className='alert alert-error show'; el.textContent='Jam pulang harus setelah jam masuk'; return; }
+  var hk=d>=480?1:(d>=240?0.5:0);
+  var lj=Math.max(0,(d-480)/60);
+  el.className='alert alert-info show';
+  el.innerHTML='⏱ <strong>'+Math.floor(d/60)+'j '+(d%60)+'m</strong> &nbsp;·&nbsp; Hari: <strong>'+hk+'</strong>'+(lj>0?' &nbsp;·&nbsp; Lembur: <strong>'+lj.toFixed(1)+'j</strong>':'');
+}
+
+function tambahLapEdit(mulai, selesai, uraian) {
+  window._editLapCount = (window._editLapCount||0)+1;
+  var id = 'elap'+window._editLapCount;
+  var wrap = document.getElementById('edit-lap-wrap');
+  if(!wrap) return;
+  var div = document.createElement('div');
+  div.id = id;
+  div.style.cssText = 'background:#f8faff;border:1.5px solid #dbeafe;border-radius:10px;padding:12px;margin-bottom:8px';
+  div.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+    +'<span style="font-size:12px;font-weight:700;color:#1d4ed8">Laporan #'+window._editLapCount+'</span>'
+    +(window._editLapCount>1?'<button onclick="this.closest('[id^=elap]').remove()" style="background:#fee2e2;border:none;border-radius:6px;padding:3px 10px;font-size:12px;color:#dc2626;cursor:pointer">✕ Hapus</button>':'')
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    +'<div class="fg"><label style="font-size:11px">Jam Mulai</label><input type="time" id="'+id+'-mulai" value="'+(mulai||'08:00')+'"></div>'
+    +'<div class="fg"><label style="font-size:11px">Jam Selesai</label><input type="time" id="'+id+'-selesai" value="'+(selesai||'17:00')+'"></div>'
+    +'</div>'
+    +'<div class="fg" style="margin-bottom:0"><label style="font-size:11px">Uraian Pekerjaan</label>'
+    +'<textarea id="'+id+'-uraian" style="min-height:60px;font-size:14px;padding:8px 12px;height:auto" placeholder="Uraian pekerjaan...">'+(uraian||'')+'</textarea></div>';
+  wrap.appendChild(div);
+}
+
+function simpanEditSM(id) {
+  var a = DB.absensi.find(function(x){ return x.id===id; });
+  if(!a) return;
+  var masuk  = (document.getElementById('edit-masuk') ||{}).value || a.masuk;
+  var pulang = (document.getElementById('edit-pulang')||{}).value || a.pulang;
+  var d = toMnt(pulang)-toMnt(masuk);
+  if(d<=0){ showAlert('alert-edit-sm','error','Jam pulang harus setelah jam masuk'); return; }
+
+  var lapItems=[];
+  document.querySelectorAll('#edit-lap-wrap [id^="elap"]').forEach(function(div){
+    var idd=div.id;
+    var m=(document.getElementById(idd+'-mulai')||{}).value||'';
+    var s=(document.getElementById(idd+'-selesai')||{}).value||'';
+    var u=((document.getElementById(idd+'-uraian')||{}).value||'').trim();
+    if(u) lapItems.push({jamMulai:m,jamSelesai:s,uraian:u});
+  });
+
+  var pk = DB.pekerja.find(function(p){return String(p.id)===String(a.pekerjaId);})||{};
+  var hk = d>=480?1:(d>=240?0.5:0);
+  var lj = parseFloat(Math.max(0,(d-480)/60).toFixed(2));
+
+  a.masuk=masuk; a.pulang=pulang;
+  a.hariKerja=hk; a.lemburJam=lj;
+  a.upahHarian=Number(pk.upah)||0; a.upahLembur=Number(pk.lembur)||0;
+  a.total=hk*(Number(pk.upah)||0)+lj*(Number(pk.lembur)||0);
+  a.laporanItems=JSON.stringify(lapItems);
+  a.deskripsi=lapItems.map(function(l){return'['+l.jamMulai+'-'+l.jamSelesai+'] '+l.uraian;}).join(' | ');
+  a.approvedBy=SM_LOGGED.nama; a.approvedAt=new Date().toISOString();
+
+  var btn=document.getElementById('btn-simpan-edit');
+  if(btn){btn.disabled=true;btn.textContent='Menyimpan...';}
+
+  apiPost({action:'update_absensi',row:a},function(res){
+    if(btn){btn.disabled=false;btn.textContent='💾 Simpan Perubahan';}
+    if(res.ok){
+      tutupModalEdit();
+      showAlert('alert-validasi','success','✅ Absensi berhasil diperbarui!');
+      renderValidasiList();
+    } else {
+      showAlert('alert-edit-sm','error','Gagal menyimpan: '+(res.error||'Error'));
+    }
+  });
+}
+
+function tutupModalEdit() {
+  var m=document.getElementById('modal-edit-sm');
+  if(m) m.remove();
 }
 
 function approveAll() {
@@ -1908,13 +2146,19 @@ setInterval(updateClock,60000); updateClock();
 // Tampilkan kode script
 document.getElementById('script-display').textContent = SCRIPT_CODE;
 
-// Init
+// REVISI 3: Baca URL dari localStorage saat startup
 try { GS_URL = localStorage.getItem(LS_URL)||''; } catch(e){}
+
 if (GS_URL) {
   document.getElementById('gs-url-input').value = GS_URL;
+  setBadge('load');
   loadAll(function(ok){
-    if(ok) goto('dashboard');
-    else { goto('settings'); showAlert('alert-settings','error','Gagal terhubung. Cek URL Apps Script.'); }
+    if(ok) {
+      goto('dashboard');
+    } else {
+      goto('settings');
+      showAlert('alert-settings','error','Gagal terhubung dengan URL tersimpan. Cek koneksi internet atau perbarui URL.');
+    }
   });
 } else {
   goto('settings');
