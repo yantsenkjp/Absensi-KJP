@@ -595,35 +595,48 @@ function goto(page) {
 // ═══════════════════════════════════════════════════════
 function apiGet(params, cb) {
   if (!GS_URL) { cb({ok:false, error:'URL belum dikonfigurasi'}); return; }
-  var called = false;
-  var cbName = '_kjp'+Date.now()+Math.floor(Math.random()*9999);
-  var qs = Object.keys(params).map(function(k){ return k+'='+encodeURIComponent(params[k]); }).join('&');
-  var el = document.createElement('script');
 
-  function done(data) {
-    if (called) return;
-    called = true;
-    clearTimeout(timer);
+  var cbName = '_kjp' + Date.now() + Math.floor(Math.random()*9999);
+  var qs = Object.keys(params).map(function(k){
+    return k + '=' + encodeURIComponent(params[k]);
+  }).join('&');
+
+  var finished = false;
+  var scriptEl = null;
+
+  // Buat timeout di level window — pasti jalan
+  var timerId = window.setTimeout(function() {
+    if (finished) return;
+    finished = true;
     delete window[cbName];
-    if (el && el.parentNode) el.parentNode.removeChild(el);
-    cb(data);
-  }
-
-  // Timeout 10 detik — pasti jalan
-  var timer = setTimeout(function(){
-    done({ok:false, error:'Timeout — pastikan URL Apps Script benar dan sudah di-deploy ulang (New Version, Who has access: Anyone).'});
+    if (scriptEl && scriptEl.parentNode) scriptEl.parentNode.removeChild(scriptEl);
+    cb({ok: false, error: 'Timeout 10s. Klik Test Koneksi untuk coba lagi.'});
   }, 10000);
 
-  // Callback dari Apps Script
-  window[cbName] = function(data){ done(data); };
-
-  // Error handler
-  el.onerror = function(){
-    done({ok:false, error:'Gagal memuat — cek URL dan koneksi internet.'});
+  // Callback JSONP
+  window[cbName] = function(data) {
+    if (finished) return;
+    finished = true;
+    window.clearTimeout(timerId);
+    delete window[cbName];
+    if (scriptEl && scriptEl.parentNode) scriptEl.parentNode.removeChild(scriptEl);
+    cb(data);
   };
 
-  el.src = GS_URL+'?'+qs+'&callback='+cbName;
-  document.head.appendChild(el);
+  // Buat script tag
+  scriptEl = document.createElement('script');
+  scriptEl.type = 'text/javascript';
+
+  scriptEl.onerror = function() {
+    if (finished) return;
+    finished = true;
+    window.clearTimeout(timerId);
+    delete window[cbName];
+    cb({ok: false, error: 'Network error. Cek koneksi internet.'});
+  };
+
+  scriptEl.src = GS_URL + '?' + qs + '&callback=' + cbName;
+  document.getElementsByTagName('head')[0].appendChild(scriptEl);
 }
 
 function apiPost(body, cb) {
@@ -2207,9 +2220,12 @@ if (GS_URL) {
   var alertEl = document.getElementById('alert-settings');
   alertEl.className = 'alert alert-info show';
   alertEl.innerHTML = '⏳ Menghubungkan ke Google Sheets...<br>'
-    + '<small style="color:#555">Jika lebih dari 10 detik, klik <strong>Test Koneksi</strong> untuk melihat detail error.</small>';
+    + '<small style="color:#555">Jika gagal, akan muncul pesan error dalam 10 detik.</small><br>'
+    + '<button onclick="hapusSimpanUrl()" class="btn btn-ghost btn-sm" style="margin-top:8px">🗑 Ganti URL</button>';
 
-  loadAll(function(ok, errMsg){
+  // Sedikit delay agar DOM siap
+  window.setTimeout(function() {
+    loadAll(function(ok, errMsg){
     if (ok) {
       goto('dashboard');
     } else {
@@ -2223,7 +2239,8 @@ if (GS_URL) {
         + '<button onclick="testKoneksi()" class="btn btn-primary btn-sm" style="margin-right:8px">🔗 Coba Hubungkan Ulang</button>'
         + '<button onclick="hapusSimpanUrl()" class="btn btn-danger btn-sm">🗑 Hapus URL & Input Ulang</button>';
     }
-  });
+    });
+  }, 300); // end setTimeout delay
 
 } else {
   goto('settings');
