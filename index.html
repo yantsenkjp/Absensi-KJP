@@ -600,45 +600,29 @@ function apiGet(params, cb) {
   var qs = Object.keys(params).map(function(k){ return k+'='+encodeURIComponent(params[k]); }).join('&');
   var el = document.createElement('script');
 
-  // Timeout PASTI berjalan setelah 8 detik
-  var timer = setTimeout(function(){
-    if(called) return;
+  function done(data) {
+    if (called) return;
     called = true;
-    cleanup();
-    cb({ok:false, error:'Timeout 8s — Apps Script belum diupdate/redeploy, atau URL salah.'});
-  }, 8000);
-
-  window[cbName] = function(data){
-    if(called) return;
-    called = true;
-    cleanup();
+    clearTimeout(timer);
+    delete window[cbName];
+    if (el && el.parentNode) el.parentNode.removeChild(el);
     cb(data);
-  };
+  }
 
-  el.onload = function(){
-    // Script loaded tapi callback belum dipanggil dalam 1 detik = Apps Script lama (tidak support JSONP)
-    setTimeout(function(){
-      if(!called){
-        called = true;
-        cleanup();
-        cb({ok:false, error:'Script dimuat tapi tidak ada respons — Apps Script perlu diupdate dan di-redeploy dengan kode terbaru.'});
-      }
-    }, 1000);
-  };
+  // Timeout 10 detik — pasti jalan
+  var timer = setTimeout(function(){
+    done({ok:false, error:'Timeout — pastikan URL Apps Script benar dan sudah di-deploy ulang (New Version, Who has access: Anyone).'});
+  }, 10000);
 
+  // Callback dari Apps Script
+  window[cbName] = function(data){ done(data); };
+
+  // Error handler
   el.onerror = function(){
-    if(called) return;
-    called = true;
-    cleanup();
-    cb({ok:false, error:'Gagal memuat script — cek URL dan koneksi internet.'});
+    done({ok:false, error:'Gagal memuat — cek URL dan koneksi internet.'});
   };
 
   el.src = GS_URL+'?'+qs+'&callback='+cbName;
-  function cleanup(){
-    clearTimeout(timer);
-    delete window[cbName];
-    if(el.parentNode) el.parentNode.removeChild(el);
-  }
   document.head.appendChild(el);
 }
 
@@ -965,15 +949,17 @@ var SCRIPT_CODE = [
 ].join('\n');
 
 function simpanUrl() {
-  var url = getFieldVal('gs-url-input');
-  if (!url || !url.startsWith('http')) { showAlert('alert-settings','error','URL tidak valid. Harus dimulai dengan https://'); return; }
-  GS_URL = url;
-  try {
-    localStorage.setItem(LS_URL, url);
-  } catch(e) {
-    showAlert('alert-settings','warn','Peringatan: Tidak dapat menyimpan URL di browser ini');
+  var url = getFieldVal('gs-url-input').trim();
+  if (!url || !url.startsWith('http')) {
+    showAlert('alert-settings','error','URL tidak valid. Harus dimulai dengan https://');
+    return;
   }
-  showAlert('alert-settings','info','⏳ Menghubungkan ke Google Sheets...');
+  // Bersihkan URL — buang parameter tambahan jika ada
+  var cleanUrl = url.split('?')[0];
+  GS_URL = cleanUrl;
+  setFieldVal('gs-url-input', cleanUrl);
+  try { localStorage.setItem(LS_URL, cleanUrl); } catch(e) {}
+  tampilSavedUrl();
   testKoneksi();
 }
 
@@ -2231,17 +2217,11 @@ if (GS_URL) {
       var msg = errMsg || 'Gagal terhubung';
       var alertEl2 = document.getElementById('alert-settings');
       alertEl2.className = 'alert alert-error show';
-      alertEl2.innerHTML = '<strong>❌ Gagal terhubung</strong><br><br>'
-        + '<strong>Pesan:</strong> ' + msg + '<br><br>'
-        + '<strong>Solusi yang harus dilakukan:</strong>'
-        + '<ol style="margin:8px 0 0 16px;line-height:2.2">'
-        + '<li>Buka Google Sheets → <strong>Extensions → Apps Script</strong></li>'
-        + '<li>Pilih semua kode → Delete → Paste kode dari tombol <strong>Copy Kode</strong> di bawah</li>'
-        + '<li>Klik <strong>Ctrl+S</strong> untuk save</li>'
-        + '<li>Klik <strong>Deploy → Manage Deployments → Edit (✏️) → New Version → Deploy</strong></li>'
-        + '<li>Pastikan <strong>Who has access: Anyone</strong></li>'
-        + '<li>Kembali ke sini → klik <strong>Test Koneksi</strong></li>'
-        + '</ol>';
+      alertEl2.innerHTML = '<strong>❌ Gagal terhubung</strong><br>'
+        + '<small>' + msg + '</small><br><br>'
+        + 'Kemungkinan penyebab: Apps Script belum di-redeploy atau URL salah.<br><br>'
+        + '<button onclick="testKoneksi()" class="btn btn-primary btn-sm" style="margin-right:8px">🔗 Coba Hubungkan Ulang</button>'
+        + '<button onclick="hapusSimpanUrl()" class="btn btn-danger btn-sm">🗑 Hapus URL & Input Ulang</button>';
     }
   });
 
