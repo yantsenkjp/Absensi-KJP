@@ -568,16 +568,23 @@ function apiGet(params, cb) {
 }
 
 function apiPost(body, cb) {
-  if (!GS_URL) { cb({ok:false, error:'URL belum dikonfigurasi'}); return; }
-  var cbName = '_kjpw'+Date.now()+Math.floor(Math.random()*9999);
-  var el = document.createElement('script');
-  var timer = setTimeout(function(){ cleanup(); cb({ok:false, error:'Timeout saat menyimpan.'}); }, 12000);
-  window[cbName] = function(data){ cleanup(); cb(data); };
-  el.onerror = function(){ cleanup(); cb({ok:false, error:'Network error'}); };
-  var qs = 'payload='+encodeURIComponent(JSON.stringify(body))+'&callback='+cbName;
-  el.src = GS_URL+'?'+qs;
-  function cleanup(){ clearTimeout(timer); delete window[cbName]; if(el.parentNode) el.parentNode.removeChild(el); }
-  document.head.appendChild(el);
+  if (!GS_URL) { cb({ok: false, error: 'URL belum dikonfigurasi'}); return; }
+  
+  fetch(GS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body)
+  })
+  .then(function(response) {
+    if (!response.ok) throw new Error('Network response was not ok');
+    return response.json();
+  })
+  .then(function(data) {
+    cb(data);
+  })
+  .catch(function(error) {
+    cb({ok: false, error: 'Network error saat menyimpan data besar.'});
+  });
 }
 
 // ═══════════════════════════════════════════════════════
