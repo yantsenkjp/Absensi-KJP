@@ -964,7 +964,6 @@ function renderDashboardData() {
   document.getElementById('s-proyek').textContent   = DB.proyek.filter(function(p){ return p.status==='aktif'; }).length;
   document.getElementById('s-absensi').textContent  = absenMggu;
 
-  // MENGAMBIL 15 ABSENSI SECARA GLOBAL BERDASARKAN WAKTU, BUKAN HANYA HARI INI
   var recentAbs = DB.absensi.slice().sort(function(a,b){
     var tA = a.createdAt || (a.tanggal+'T'+a.masuk);
     var tB = b.createdAt || (b.tanggal+'T'+b.masuk);
@@ -985,8 +984,7 @@ function renderDashboardData() {
     var mn = DB.mandor.find(function(m){  return String(m.id)===String(a.mandorId);  })||{};
     var pr = DB.proyek.find(function(p){  return String(p.id)===String(a.proyekId);  })||{};
     
-    // Format Laporan Pekerjaan (Spesifik dipisah)
-    var lapsHtml = '<span style="color:#ccc;font-size:11px">Belum ada laporan</span>';
+    var lapsHtml = '<span style="color:#ccc;font-size:11px">—</span>';
     try {
       var li = JSON.parse(a.laporanItems||'[]');
       if(li.length) {
@@ -996,13 +994,15 @@ function renderDashboardData() {
       } else if(a.deskripsi) { lapsHtml = '<div style="font-size:11px">'+a.deskripsi+'</div>'; }
     } catch(e) { if(a.deskripsi) lapsHtml = '<div style="font-size:11px">'+a.deskripsi+'</div>'; }
 
-    // Format Foto Thumbnail (Spesifik dipisah)
-    var fotoHtml = '<span style="color:#ccc;font-size:11px">Tidak ada foto</span>';
+    var fotoHtml = '';
     try {
       var fotos = JSON.parse(a.foto||'[]');
       if(fotos.length) {
-        fotoHtml = '<div style="display:flex;gap:4px;flex-wrap:wrap">'
-          + fotos.map(function(f){ return '<img src="'+f+'" style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #ddd;cursor:pointer" onclick="window.open(\''+f+'\',\'_blank\')">'; }).join('')
+        fotoHtml = '<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">'
+          + fotos.map(function(f){ 
+            var fileName = a.tanggal + '_' + (a.deskripsi ? a.deskripsi.substring(0,20) : 'kerja') + '.jpg';
+            return '<img src="'+f+'" style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #ddd;cursor:pointer" onclick="openPhoto(\''+f+'\', \''+fileName+'\')">'; 
+          }).join('')
           + '</div>';
       }
     } catch(e){}
@@ -1010,17 +1010,27 @@ function renderDashboardData() {
     return '<tr>'
       +'<td><strong>'+(pk.nama||'?')+'</strong><br><span class="text-sm text-gray">'+(pk.jabatan||'')+'</span></td>'
       +'<td class="text-sm"><strong>'+(pr.nama||'?')+'</strong><br><span style="color:#888">Mandor: '+(mn.nama||'?')+'</span></td>'
-      +'<td class="text-sm" style="white-space:nowrap">'+fmtTgl(a.tanggal)+'<br><span style="color:#888">'+a.masuk+' – '+(a.pulang||'?')+'</span></td>'
-      +'<td style="min-width:180px;max-width:280px">'+lapsHtml+'</td>'
+      +'<td class="text-sm" style="white-space:nowrap">'+fmtTgl(a.tanggal)+'</td>'
+      +'<td style="min-width:180px">'+lapsHtml+'</td>'
       +'<td style="min-width:120px">'+fotoHtml+'</td>'
       +'<td><span class="badge badge-'+a.status+'">'+a.status+'</span></td>'
       +'</tr>';
   }).join('');
 
-  el.innerHTML = refreshBtn
-    + '<div class="table-wrap"><table><thead><tr>'
-    + '<th>Pekerja</th><th>Proyek / Mandor</th><th>Tanggal & Jam</th><th>Laporan Pekerjaan</th><th>Foto</th><th>Status</th>'
-    + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+  el.innerHTML = refreshBtn + '<div class="table-wrap"><table><thead><tr><th>Pekerja</th><th>Proyek/Mandor</th><th>Tanggal</th><th>Laporan</th><th>Foto</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+
+// FUNGSI POPUP FOTO
+function openPhoto(url, fileName) {
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+  modal.innerHTML = '<img src="'+url+'" style="max-width:90%;max-height:80%;border-radius:8px;box-shadow:0 0 20px rgba(0,0,0,0.5)">'
+    +'<div style="margin-top:15px;display:flex;gap:10px">'
+    +'<button class="btn btn-primary" onclick="window.open(\''+url+'\')">Buka Tab Baru</button>'
+    +'<a href="'+url+'" download="'+fileName+'" class="btn btn-gold">💾 Simpan ('+fileName+')</a>'
+    +'<button class="btn btn-ghost" onclick="this.parentElement.parentElement.remove()">Tutup</button>'
+    +'</div>';
+  document.body.appendChild(modal);
 }
 
 // ═══════════════════════════════════════════════════════
