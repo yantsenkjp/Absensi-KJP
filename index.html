@@ -142,6 +142,43 @@ tr:hover td{background:#fafafa}
   .pline{border-top:1px solid #000;margin-top:44px;padding-top:3px}
 }
 
+/* ── PR TABLE ── */
+#pr-item-table td { border:1px solid #e8e8e8; padding:0; vertical-align:middle; }
+#pr-item-table td input { width:100%;border:none;background:transparent;font-size:12px;padding:6px 8px;outline:none;font-family:inherit;color:#111; }
+#pr-item-table td input:focus { background:rgba(200,16,46,.04); }
+#pr-item-table td.pr-td-num { text-align:center;font-size:11px;color:#aaa;padding:6px 4px;width:36px; }
+#pr-item-table td.pr-td-total { background:#f9f9f9; }
+#pr-item-table td.pr-td-total input { font-weight:700;color:#111;text-align:right; }
+#pr-item-table tr:nth-child(even) { background:#fdfafa; }
+#pr-item-table td input[type=number] { text-align:right; }
+/* PR List item */
+.pr-list-item { display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:background .12s; }
+.pr-list-item:last-child { border-bottom:none; }
+.pr-list-item:hover { background:#fafafa; }
+.pr-list-item.selected { background:#fff5f5;border-left:3px solid #C8102E; }
+.pr-list-meta { font-size:11px;color:#888;margin-top:2px; }
+/* PR Print */
+@media print {
+  body > * { display:none !important; }
+  #pr-print-area { display:block !important; font-family:Arial,sans-serif;font-size:10px;color:#000;padding:16px; }
+  .prp-header { display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px; }
+  .prp-title { text-align:center;font-size:15px;font-weight:900;letter-spacing:2px;text-decoration:underline;margin-bottom:10px; }
+  .prp-meta { border:1px solid #000;border-collapse:collapse;font-size:9px; }
+  .prp-meta td { border:1px solid #000;padding:3px 8px; }
+  .prp-info { display:grid;grid-template-columns:1fr 1fr 1fr 1fr;border:1px solid #000;border-collapse:collapse;font-size:9px;margin-bottom:8px; }
+  .prp-info-cell { border-right:1px solid #000;padding:4px 8px; }
+  .prp-tbl { width:100%;border-collapse:collapse;font-size:9px;margin-bottom:10px; }
+  .prp-tbl th,.prp-tbl td { border:1px solid #000;padding:3px 5px; }
+  .prp-tbl th { background:#eee;font-weight:700;text-align:center; }
+  .prp-tbl .tr { text-align:right; }
+  .prp-tbl .tc { text-align:center; }
+  .prp-total { border:2px solid #000;padding:5px 8px;font-weight:900;text-align:right;font-size:11px;margin-bottom:10px; }
+  .prp-sign { display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid #000;border-collapse:collapse;font-size:9px; }
+  .prp-sign-box { border-right:1px solid #000;padding:4px 8px; }
+  .prp-sign-box:last-child { border-right:none; }
+  .prp-sign-label { font-weight:700;text-transform:uppercase;font-size:8px;background:#eee;padding:3px 6px;margin:-4px -8px 32px;display:block; }
+  .prp-sign-line { border-top:1px solid #000;margin-top:28px;padding-top:3px;text-align:center;font-size:8px; }
+}
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
   #sidebar{transform:translateX(-100%)}
@@ -180,6 +217,7 @@ tr:hover td{background:#fafafa}
   <div class="nav-item" onclick="goto('absensi')"><span class="nav-icon">✏️</span>Input Absensi</div>
   <div class="nav-item" onclick="goto('validasi')"><span class="nav-icon">✅</span>Validasi SM</div>
   <div class="nav-item" onclick="goto('rekap')"><span class="nav-icon">🖨️</span>Rekap &amp; Print</div>
+  <div class="nav-item" onclick="goto('pr')"><span class="nav-icon">🛒</span>Purchase Req.</div>
   <div class="nav-section">Master Data</div>
   <div class="nav-item" onclick="goto('pekerja')"><span class="nav-icon">👷</span>Pekerja</div>
   <div class="nav-item" onclick="goto('mandor')"><span class="nav-icon">🦺</span>Mandor</div>
@@ -465,7 +503,139 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
+    <!-- ═══ PAGE: PURCHASE REQUISITION ═══ -->
+    <div class="page" id="page-pr">
+
+      <!-- Toolbar PR -->
+      <div class="flex gap-8 mb-12" style="flex-wrap:wrap;align-items:center;justify-content:space-between">
+        <div class="flex gap-8" style="flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="prBuatBaru()">➕ PR Baru</button>
+          <button class="btn btn-outline" onclick="prReset()">↺ Reset Form</button>
+        </div>
+        <div class="flex gap-8" style="flex-wrap:wrap">
+          <button class="btn btn-gold" onclick="prSimpan()">💾 Simpan PR</button>
+          <button class="btn btn-ghost" onclick="prPrint()">🖨️ Print / PDF</button>
+        </div>
+      </div>
+
+      <!-- Alert PR -->
+      <div class="alert" id="alert-pr"></div>
+
+      <!-- Daftar PR tersimpan -->
+      <div class="card mb-12" id="card-pr-list">
+        <div class="card-title" style="justify-content:space-between">
+          <span>📋 Daftar Purchase Requisition</span>
+          <span style="font-size:12px;color:#888;font-weight:400" id="pr-count-label"></span>
+        </div>
+        <div id="list-pr"><div class="empty-state">Belum ada PR tersimpan</div></div>
+      </div>
+
+      <!-- Form PR — mengikuti format dokumen PDF -->
+      <div class="card" id="card-pr-form">
+        <div class="card-title">📝 Form Purchase Requisition</div>
+
+        <!-- Header info: 2 kolom -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div class="form-grid" style="grid-template-columns:1fr 1fr">
+            <div class="fg">
+              <label>Tanggal</label>
+              <input type="date" id="pr-tanggal">
+            </div>
+            <div class="fg">
+              <label>Requester</label>
+              <input type="text" id="pr-requester" placeholder="Nama requester">
+            </div>
+          </div>
+          <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">
+            <div class="fg">
+              <label>Proyek</label>
+              <select id="pr-proyek-sel">
+                <option value="">— Pilih —</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label>PR No</label>
+              <input type="text" id="pr-no" readonly style="background:#f5f5f5">
+            </div>
+            <div class="fg">
+              <label>PIC Purchasing</label>
+              <input type="text" id="pr-pic" placeholder="Nama PIC">
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabel Item PR -->
+        <div class="table-wrap" style="margin-bottom:8px">
+          <table id="pr-item-table" style="font-size:12px;min-width:700px">
+            <thead>
+              <tr>
+                <th style="width:36px;text-align:center">No</th>
+                <th style="width:90px">Code Budget</th>
+                <th>Deskripsi Item</th>
+                <th style="width:60px;text-align:center">Unit</th>
+                <th style="width:60px;text-align:center">Qty</th>
+                <th style="width:130px;text-align:right">Harga / Unit (Rp)</th>
+                <th style="width:140px;text-align:right;background:#f9f9f9">Total Harga (Rp)</th>
+                <th style="width:110px">Keterangan</th>
+                <th style="width:32px"></th>
+              </tr>
+            </thead>
+            <tbody id="pr-item-body"></tbody>
+            <tfoot>
+              <tr>
+                <td colspan="5" style="padding:8px 12px;font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;background:#111;color:#F5A800;border:1px solid #333;text-align:center">JUMLAH TOTAL</td>
+                <td style="border:1px solid #ddd"></td>
+                <td style="padding:8px 12px;font-weight:700;font-size:13px;text-align:right;background:#f9f9f9;color:#C8102E;border:1px solid #ddd" id="pr-grand-total">Rp 0</td>
+                <td colspan="2" style="border:1px solid #ddd"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- Add/Remove row -->
+        <div class="flex gap-8 mb-12" style="justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="prHapusBaris()" style="color:#dc2626;border-color:#fca5a5">− Hapus Baris</button>
+          <button class="btn btn-ghost btn-sm" onclick="prTambahBaris()" style="color:#16a34a;border-color:#86efac">+ Tambah Baris</button>
+        </div>
+
+        <!-- Note -->
+        <div class="fg mb-12">
+          <label>Catatan / Note</label>
+          <textarea id="pr-note" rows="2" placeholder="Catatan tambahan..."></textarea>
+        </div>
+
+        <!-- Tanda tangan -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1px solid #e0e0e0;border-radius:6px;overflow:hidden;font-size:12px;margin-bottom:12px">
+          <div style="border-right:1px solid #e0e0e0">
+            <div style="background:#f5f5f5;padding:7px 12px;font-weight:700;font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:#666;border-bottom:1px solid #e0e0e0">Requested By</div>
+            <div style="padding:44px 12px 10px;text-align:center;color:#aaa;font-size:11px">( _________________ )</div>
+          </div>
+          <div style="border-right:1px solid #e0e0e0">
+            <div style="background:#f5f5f5;padding:7px 12px;font-weight:700;font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:#666;border-bottom:1px solid #e0e0e0">Checked By</div>
+            <div style="padding:44px 12px 10px;text-align:center;color:#aaa;font-size:11px">( _________________ )</div>
+          </div>
+          <div>
+            <div style="background:#f5f5f5;padding:7px 12px;font-weight:700;font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:#666;border-bottom:1px solid #e0e0e0">Approved By</div>
+            <div style="padding:44px 12px 10px;text-align:center;color:#aaa;font-size:11px">Site Manager</div>
+          </div>
+        </div>
+
+        <p style="font-size:10px;color:#aaa;font-style:italic;text-decoration:underline">ORIGINAL (PURCHASE); COPY (ACC, REQUESTER)</p>
+      </div>
+    </div>
+    <!-- ═══ END PAGE PR ═══ -->
+
   </div></div><div id="print-area"></div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PR PRINT AREA (terpisah dari print-area absensi)
+     ═══════════════════════════════════════════════════════ -->
+<div id="pr-print-area" style="display:none"></div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PR PRINT AREA (terpisah dari print-area absensi)
+     ═══════════════════════════════════════════════════════ -->
+<div id="pr-print-area" style="display:none"></div>
 
 <script>
 // ═══════════════════════════════════════════════════════
@@ -487,7 +657,8 @@ var HARI_PD = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
 var PAGE_TITLES = {
   settings:'Konfigurasi', dashboard:'Dashboard', absensi:'Input Absensi',
   validasi:'Validasi SM', rekap:'Rekap & Print', pekerja:'Data Pekerja',
-  mandor:'Data Mandor', sm:'Site Manager', proyek:'Data Proyek'
+  mandor:'Data Mandor', sm:'Site Manager', proyek:'Data Proyek',
+  pr:'Purchase Requisition'
 };
 
 // ═══════════════════════════════════════════════════════
@@ -544,7 +715,7 @@ function goto(page) {
   });
   document.getElementById('topbar-title').textContent = PAGE_TITLES[page]||page;
   closeSidebar();
-  var fn = { dashboard: renderDashboard, absensi: initAbsensi, validasi: initValidasi, rekap: initRekap, pekerja: renderPekerja, mandor: renderMandor, sm: renderSM, proyek: renderProyek, settings: tampilSavedUrl };
+  var fn = { dashboard: renderDashboard, absensi: initAbsensi, validasi: initValidasi, rekap: initRekap, pekerja: renderPekerja, mandor: renderMandor, sm: renderSM, proyek: renderProyek, settings: tampilSavedUrl, pr: initPR };
   if (fn[page]) fn[page]();
 }
 
@@ -1681,9 +1852,351 @@ function hapusProyek(id) {
 }
 function resetProyek() { prEditId='';['pr-nama','pr-lokasi','pr-mandor','pr-sm'].forEach(function(id){setFieldVal(id,'');}); setFieldVal('pr-status','aktif'); document.getElementById('btn-pr-simpan').textContent='💾 Simpan'; }
 
+
 // ═══════════════════════════════════════════════════════
-// CLOCK & INIT
+// PURCHASE REQUISITION (PR)
 // ═══════════════════════════════════════════════════════
+var PR_DB = []; // in-memory list of saved PRs
+var PR_ROWS = [];  // current form rows
+var PR_EDIT_ID = '';
+var PR_NO_SEQ = 1;
+
+// ── Helpers ──
+function prFmt(n) {
+  if (!n && n !== 0) return '';
+  return Number(n).toLocaleString('id-ID');
+}
+function prParse(str) {
+  if (str === '' || str === null || str === undefined) return 0;
+  return parseFloat(String(str).replace(/\./g,'').replace(',','.')) || 0;
+}
+function prGenNo() {
+  var now = new Date();
+  var yr  = now.getFullYear();
+  var seq = String(PR_NO_SEQ).padStart(4,'0');
+  PR_NO_SEQ++;
+  return yr + '/' + seq;
+}
+function prTodayStr() {
+  var n = new Date();
+  return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate());
+}
+
+// ── Init page ──
+function initPR() {
+  // populate proyek dropdown
+  var sel = document.getElementById('pr-proyek-sel');
+  sel.innerHTML = '<option value="">— Pilih Proyek —</option>' +
+    DB.proyek.map(function(p){ return '<option value="'+p.id+'">'+p.nama+'</option>'; }).join('');
+
+  // set default tanggal
+  if (!document.getElementById('pr-tanggal').value) {
+    document.getElementById('pr-tanggal').value = prTodayStr();
+  }
+  // auto-generate PR no if empty
+  if (!document.getElementById('pr-no').value) {
+    document.getElementById('pr-no').value = prGenNo();
+  }
+  // init rows if empty
+  if (PR_ROWS.length === 0) {
+    for (var i=0; i<10; i++) PR_ROWS.push({code:'',desc:'',unit:'',qty:'',price:'',remark:''});
+  }
+  prRenderRows();
+  prRenderList();
+}
+
+// ── Row rendering ──
+function prRenderRows() {
+  var tbody = document.getElementById('pr-item-body');
+  tbody.innerHTML = '';
+  PR_ROWS.forEach(function(r, i) {
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td class="pr-td-num">'+(i+1)+'</td>'+
+      '<td><input value="'+esc(r.code)+'" placeholder="" data-i="'+i+'" data-f="code"/></td>'+
+      '<td><input value="'+esc(r.desc)+'" placeholder="'+(i<3?'Deskripsi item...':'')+'" data-i="'+i+'" data-f="desc"/></td>'+
+      '<td style="text-align:center"><input value="'+esc(r.unit)+'" placeholder="" data-i="'+i+'" data-f="unit" style="text-align:center"/></td>'+
+      '<td><input type="number" value="'+esc(r.qty)+'" placeholder="" min="0" data-i="'+i+'" data-f="qty" style="text-align:center"/></td>'+
+      '<td><input type="text" value="'+(r.price?prFmt(r.price):'')+'" placeholder="0" data-i="'+i+'" data-f="price" class="pr-price-inp" style="text-align:right"/></td>'+
+      '<td class="pr-td-total"><input type="text" value="'+prCalcRow(r)+'" readonly data-i="'+i+'" data-f="total" tabindex="-1" style="text-align:right;font-weight:700"/></td>'+
+      '<td><input value="'+esc(r.remark)+'" placeholder="" data-i="'+i+'" data-f="remark"/></td>'+
+      '<td style="text-align:center;padding:0 4px"><button onclick="prDeleteRow('+i+')" title="Hapus" style="background:none;border:none;cursor:pointer;color:#e0e0e0;font-size:14px;line-height:1;padding:4px" onmouseover="this.style.color=\'#dc2626\'" onmouseout="this.style.color=\'#e0e0e0\'">✕</button></td>';
+    tbody.appendChild(tr);
+  });
+  prAttachRowListeners();
+  prUpdateGrand();
+}
+function esc(s){ return String(s||'').replace(/"/g,'&quot;'); }
+
+function prCalcRow(r) {
+  var qty = parseFloat(r.qty) || 0;
+  var price = prParse(r.price);
+  var tot = qty * price;
+  return tot > 0 ? prFmt(tot) : '';
+}
+
+function prAttachRowListeners() {
+  document.querySelectorAll('#pr-item-body input[data-i]').forEach(function(inp) {
+    inp.addEventListener('input', function(e) {
+      var i = +e.target.dataset.i;
+      var f = e.target.dataset.f;
+      PR_ROWS[i][f] = e.target.value;
+      var totalInp = document.querySelector('#pr-item-body input[data-i="'+i+'"][data-f="total"]');
+      if (totalInp) totalInp.value = prCalcRow(PR_ROWS[i]);
+      prUpdateGrand();
+    });
+    if (inp.dataset.f === 'price') {
+      inp.addEventListener('blur', function(e) {
+        var i = +e.target.dataset.i;
+        var raw = prParse(e.target.value);
+        PR_ROWS[i].price = raw;
+        e.target.value = raw > 0 ? prFmt(raw) : '';
+        var totalInp = document.querySelector('#pr-item-body input[data-i="'+i+'"][data-f="total"]');
+        if (totalInp) totalInp.value = prCalcRow(PR_ROWS[i]);
+        prUpdateGrand();
+      });
+    }
+  });
+}
+
+function prUpdateGrand() {
+  var sum = 0;
+  PR_ROWS.forEach(function(r) {
+    sum += (parseFloat(r.qty)||0) * prParse(r.price);
+  });
+  document.getElementById('pr-grand-total').textContent = rupiah(sum);
+}
+
+// ── Add / Remove rows ──
+function prTambahBaris() {
+  PR_ROWS.push({code:'',desc:'',unit:'',qty:'',price:'',remark:''});
+  prRenderRows();
+}
+function prHapusBaris() {
+  if (PR_ROWS.length <= 1) return;
+  PR_ROWS.pop();
+  prRenderRows();
+}
+function prDeleteRow(idx) {
+  if (PR_ROWS.length <= 1) return;
+  PR_ROWS.splice(idx, 1);
+  prRenderRows();
+}
+
+// ── Buat PR baru ──
+function prBuatBaru() {
+  PR_EDIT_ID = '';
+  PR_ROWS = [];
+  for (var i=0; i<10; i++) PR_ROWS.push({code:'',desc:'',unit:'',qty:'',price:'',remark:''});
+  document.getElementById('pr-tanggal').value = prTodayStr();
+  document.getElementById('pr-requester').value = '';
+  document.getElementById('pr-proyek-sel').value = '';
+  document.getElementById('pr-no').value = prGenNo();
+  document.getElementById('pr-pic').value = '';
+  document.getElementById('pr-note').value = '';
+  prRenderRows();
+  document.getElementById('card-pr-form').scrollIntoView({behavior:'smooth'});
+}
+
+// ── Reset form ──
+function prReset() {
+  if (!confirm('Reset form PR?')) return;
+  prBuatBaru();
+}
+
+// ── Simpan PR ──
+function prSimpan() {
+  var proyek = document.getElementById('pr-proyek-sel').value;
+  var req    = document.getElementById('pr-requester').value.trim();
+  var prNo   = document.getElementById('pr-no').value.trim();
+
+  if (!prNo)   { showAlert('alert-pr','error','PR No harus diisi'); return; }
+  if (!proyek) { showAlert('alert-pr','error','Pilih proyek terlebih dahulu'); return; }
+
+  // collect items
+  var items = PR_ROWS.filter(function(r){ return r.desc.trim() !== ''; }).map(function(r){
+    return {
+      code: r.code, desc: r.desc, unit: r.unit,
+      qty: parseFloat(r.qty)||0,
+      price: prParse(r.price),
+      total: (parseFloat(r.qty)||0) * prParse(r.price),
+      remark: r.remark
+    };
+  });
+  if (items.length === 0) { showAlert('alert-pr','error','Minimal 1 item deskripsi harus diisi'); return; }
+
+  var proyekObj = DB.proyek.find(function(p){ return p.id === proyek; }) || {};
+  var grand = items.reduce(function(s,it){ return s+it.total; }, 0);
+
+  var pr = {
+    id:       PR_EDIT_ID || uid(),
+    prNo:     prNo,
+    tanggal:  document.getElementById('pr-tanggal').value,
+    requester:req,
+    proyekId: proyek,
+    proyekNama: proyekObj.nama || '',
+    pic:      document.getElementById('pr-pic').value.trim(),
+    note:     document.getElementById('pr-note').value.trim(),
+    items:    items,
+    grand:    grand,
+    status:   'pending',
+    createdAt: new Date().toISOString()
+  };
+
+  if (PR_EDIT_ID) {
+    var idx = PR_DB.findIndex(function(x){ return x.id === PR_EDIT_ID; });
+    if (idx >= 0) PR_DB[idx] = pr;
+  } else {
+    PR_DB.unshift(pr);
+  }
+
+  showAlert('alert-pr','success','✅ PR '+prNo+' berhasil disimpan!');
+  PR_EDIT_ID = '';
+  prRenderList();
+
+  // scroll to list
+  document.getElementById('card-pr-list').scrollIntoView({behavior:'smooth'});
+}
+
+// ── Render list ──
+function prRenderList() {
+  var el = document.getElementById('list-pr');
+  var label = document.getElementById('pr-count-label');
+  label.textContent = PR_DB.length + ' dokumen';
+  if (!PR_DB.length) {
+    el.innerHTML = '<div class="empty-state">Belum ada PR tersimpan. Klik "PR Baru" untuk membuat.</div>';
+    return;
+  }
+  var statusBadge = { pending:'badge-pending', approved:'badge-approved', rejected:'badge-rejected' };
+  el.innerHTML = '<div class="table-wrap"><table><thead><tr>'+
+    '<th>PR No</th><th>Tanggal</th><th>Proyek</th><th>Requester</th>'+
+    '<th style="text-align:right">Jumlah (Rp)</th><th>Status</th><th></th></tr></thead><tbody>'+
+    PR_DB.map(function(pr) {
+      return '<tr>'+
+        '<td><strong>'+pr.prNo+'</strong></td>'+
+        '<td class="text-sm">'+fmtTgl(pr.tanggal)+'</td>'+
+        '<td class="text-sm">'+pr.proyekNama+'</td>'+
+        '<td class="text-sm">'+pr.requester+'</td>'+
+        '<td class="text-sm" style="text-align:right;font-weight:600">'+Number(pr.grand).toLocaleString('id-ID')+'</td>'+
+        '<td><span class="badge '+(statusBadge[pr.status]||'badge-pending')+'">'+pr.status+'</span></td>'+
+        '<td><div class="flex gap-8">'+
+          '<button class="btn btn-sm btn-outline" onclick="prEdit(\''+pr.id+'\')">✏️</button>'+
+          '<button class="btn btn-sm btn-gold btn-sm" style="padding:4px 8px;font-size:11px" onclick="prPrintById(\''+pr.id+'\')">🖨️</button>'+
+          '<button class="btn btn-sm btn-danger" onclick="prHapus(\''+pr.id+'\')">🗑</button>'+
+        '</div></td>'+
+      '</tr>';
+    }).join('')+'</tbody></table></div>';
+}
+
+// ── Edit PR ──
+function prEdit(id) {
+  var pr = PR_DB.find(function(x){ return x.id===id; }); if (!pr) return;
+  PR_EDIT_ID = id;
+  document.getElementById('pr-no').value       = pr.prNo;
+  document.getElementById('pr-tanggal').value  = pr.tanggal;
+  document.getElementById('pr-requester').value= pr.requester;
+  document.getElementById('pr-proyek-sel').value = pr.proyekId;
+  document.getElementById('pr-pic').value      = pr.pic;
+  document.getElementById('pr-note').value     = pr.note;
+  // rebuild rows
+  PR_ROWS = pr.items.map(function(it){
+    return {code:it.code,desc:it.desc,unit:it.unit,qty:it.qty,price:it.price,remark:it.remark};
+  });
+  while (PR_ROWS.length < 10) PR_ROWS.push({code:'',desc:'',unit:'',qty:'',price:'',remark:''});
+  prRenderRows();
+  showAlert('alert-pr','info','📝 Mengedit PR '+pr.prNo);
+  document.getElementById('card-pr-form').scrollIntoView({behavior:'smooth'});
+}
+
+// ── Hapus PR ──
+function prHapus(id) {
+  if (!confirm('Hapus PR ini?')) return;
+  PR_DB = PR_DB.filter(function(x){ return x.id !== id; });
+  prRenderList();
+}
+
+// ── Print PR (current form) ──
+function prPrint() {
+  // collect current form data
+  var prNo     = document.getElementById('pr-no').value||'-';
+  var tanggal  = document.getElementById('pr-tanggal').value;
+  var req      = document.getElementById('pr-requester').value||'-';
+  var pic      = document.getElementById('pr-pic').value||'-';
+  var note     = document.getElementById('pr-note').value;
+  var proyek   = document.getElementById('pr-proyek-sel');
+  var proyekNama = proyek.options[proyek.selectedIndex]?proyek.options[proyek.selectedIndex].text:'';
+  var items = PR_ROWS.filter(function(r){return r.desc.trim()!=='';}).map(function(r){
+    return {code:r.code,desc:r.desc,unit:r.unit,qty:r.qty||0,price:prParse(r.price),remark:r.remark};
+  });
+  prRenderPrintArea(prNo,tanggal,req,pic,proyekNama,note,items);
+  window.print();
+}
+function prPrintById(id) {
+  var pr = PR_DB.find(function(x){return x.id===id;}); if(!pr) return;
+  prRenderPrintArea(pr.prNo,pr.tanggal,pr.requester,pr.pic,pr.proyekNama,pr.note,pr.items);
+  window.print();
+}
+function prRenderPrintArea(prNo,tanggal,req,pic,proyekNama,note,items) {
+  var grand = items.reduce(function(s,it){ return s+(parseFloat(it.qty)||0)*it.price; },0);
+  var rows = items.map(function(it,i){
+    var tot = (parseFloat(it.qty)||0)*it.price;
+    return '<tr>'+
+      '<td class="tc">'+(i+1)+'</td>'+
+      '<td>'+esc(it.code)+'</td>'+
+      '<td>'+esc(it.desc)+'</td>'+
+      '<td class="tc">'+esc(it.unit)+'</td>'+
+      '<td class="tc">'+esc(it.qty)+'</td>'+
+      '<td class="tr">'+(it.price?Number(it.price).toLocaleString('id-ID'):'')+'</td>'+
+      '<td class="tr">'+(tot>0?Number(tot).toLocaleString('id-ID'):'')+'</td>'+
+      '<td>'+esc(it.remark)+'</td>'+
+    '</tr>';
+  }).join('');
+
+  document.getElementById('pr-print-area').innerHTML =
+    '<div class="prp-header">'+
+      '<div>'+
+        '<svg width="120" height="32" viewBox="0 0 220 50" xmlns="http://www.w3.org/2000/svg">'+
+          '<rect x="0" y="0" width="20" height="34" fill="#C8102E"/>'+
+          '<rect x="20" y="0" width="14" height="13" fill="#C8102E"/>'+
+          '<rect x="20" y="21" width="14" height="13" fill="#C8102E"/>'+
+          '<rect x="15" y="11" width="12" height="11" fill="#F5A800"/>'+
+          '<text x="42" y="34" font-family="Arial Black,sans-serif" font-weight="900" font-size="23" fill="#111" letter-spacing="1">KALIABANG</text>'+
+        '</svg>'+
+      '</div>'+
+      '<table class="prp-meta">'+
+        '<tr><td style="background:#eee;font-weight:700;font-size:8px">PROJECT</td><td><strong>'+esc(proyekNama)+'</strong></td></tr>'+
+        '<tr><td style="background:#eee;font-weight:700;font-size:8px">PR NO</td><td><strong>'+esc(prNo)+'</strong></td></tr>'+
+        '<tr><td style="background:#eee;font-weight:700;font-size:8px">PIC PURCHASING</td><td>'+esc(pic)+'</td></tr>'+
+      '</table>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid #000;margin-bottom:6px;font-size:9px">'+
+      '<div style="border-right:1px solid #000;padding:3px 8px"><strong>DATE</strong>&nbsp;&nbsp;'+fmtTgl(tanggal)+'</div>'+
+      '<div style="padding:3px 8px"><strong>REQUESTER</strong>&nbsp;&nbsp;'+esc(req)+'</div>'+
+    '</div>'+
+    '<div class="prp-title">PURCHASE REQUISITION</div>'+
+    '<table class="prp-tbl">'+
+      '<thead><tr>'+
+        '<th style="width:22px">NO</th>'+
+        '<th style="width:60px">CODE BUDGET</th>'+
+        '<th>DESCRIPTION</th>'+
+        '<th style="width:36px">UNIT</th>'+
+        '<th style="width:30px">QTY</th>'+
+        '<th style="width:80px">PRICE / UNIT</th>'+
+        '<th style="width:85px">TOTAL PRICE</th>'+
+        '<th style="width:70px">REMARK</th>'+
+      '</tr></thead><tbody>'+rows+'</tbody>'+
+    '</table>'+
+    '<div class="prp-total">JUMLAH : Rp '+Number(grand).toLocaleString('id-ID')+'</div>'+
+    (note?'<div style="font-size:9px;margin-bottom:8px"><strong>Note:</strong> '+esc(note)+'</div>':'')+
+    '<div class="prp-sign">'+
+      '<div class="prp-sign-box"><span class="prp-sign-label">Requested By</span><div class="prp-sign-line">&nbsp;</div></div>'+
+      '<div class="prp-sign-box"><span class="prp-sign-label">Checked By</span><div class="prp-sign-line">&nbsp;</div></div>'+
+      '<div class="prp-sign-box" style="border-right:none"><span class="prp-sign-label">Approved By</span><div class="prp-sign-line">Site Manager</div></div>'+
+    '</div>'+
+    '<p style="font-size:8px;color:#666;margin-top:6px;font-style:italic;text-decoration:underline">ORIGINAL (PURCHASE); COPY (ACC, REQUESTER)</p>';
+}
+
+
 function updateClock() {
   var n=new Date(); document.getElementById('topbar-date').textContent= HARI[n.getDay()]+', '+n.getDate()+' '+BLN[n.getMonth()]+' '+n.getFullYear();
 }
