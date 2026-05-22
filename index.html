@@ -1456,83 +1456,74 @@ function tampilkanRekap() {
 }
 
 function renderRekapTable() {
-  var data   = getRekapData();
-  var el     = document.getElementById('rekap-result');
-  var tbl    = document.getElementById('rekap-table');
-  var dari   = getFieldVal('rek-dari');
+  var data = getRekapData();
+  var el = document.getElementById('rekap-result');
+  var tbl = document.getElementById('rekap-table');
+  var dari = getFieldVal('rek-dari');
   var sampai = getFieldVal('rek-sampai');
-  el.style.display='block';
   
-  if (!data.length) { tbl.innerHTML='<div class="card empty-state">Tidak ada data absensi</div>'; return; }
+  el.style.display = 'block';
+  if (!data.length) { tbl.innerHTML = '<div class="card empty-state">Tidak ada data absensi</div>'; return; }
   
-  var mode = getBayarMode();
   var weeks = getWeeks(dari, sampai);
   var html = '';
 
-  weeks.forEach(function(week){
-    var wData = data.filter(function(a){ return a.tanggal >= week.start && a.tanggal <= week.end; });
+  weeks.forEach(function(week) {
+    var wData = data.filter(function(a) { return a.tanggal >= week.start && a.tanggal <= week.end; });
     if (!wData.length) return;
     
-    var byMandor = {}; 
-    wData.forEach(function(a){ var k = a.mandorId||'_'; if(!byMandor[k]) byMandor[k]=[]; byMandor[k].push(a); });
+    // Kelompokkan berdasarkan Mandor
+    var byMandor = {};
+    wData.forEach(function(a) { var k = a.mandorId || 'tanpa_mandor'; if (!byMandor[k]) byMandor[k] = []; byMandor[k].push(a); });
 
-    html += '<div class="card" style="padding:0;overflow:hidden;margin-bottom:20px">'
-         + '<div style="background:#111;color:#fff;padding:10px 14px;font-size:13px;font-weight:700">📅 Periode: '+fmtTgl(week.start)+' – '+fmtTgl(week.end)+'</div>';
+    html += '<div class="card" style="margin-bottom:20px; overflow-x:auto;">'
+         + '<div style="background:#333; color:#fff; padding:10px; font-weight:bold; font-size:13px;">📅 Periode: ' + fmtTgl(week.start) + ' s/d ' + fmtTgl(week.end) + '</div>';
 
-    Object.keys(byMandor).forEach(function(mnId){
+    Object.keys(byMandor).forEach(function(mnId) {
+      var mn = DB.mandor.find(function(m) { return String(m.id) === mnId; }) || { nama: 'Mandor Tidak Ditemukan' };
       var mnRecs = byMandor[mnId];
-      var mn = DB.mandor.find(function(m){ return String(m.id)===mnId; }) || {nama:'(Tanpa Mandor)'};
-      var byPk = {}; 
-      mnRecs.forEach(function(a){ var k = a.pekerjaId; if(!byPk[k]) byPk[k]=[]; byPk[k].push(a); });
+      var byPk = {};
+      mnRecs.forEach(function(a) { var k = a.pekerjaId; if (!byPk[k]) byPk[k] = []; byPk[k].push(a); });
 
-      html += '<div style="background:#f8f8f8;padding:8px 14px;font-weight:700;font-size:12px;border-bottom:1px solid #eee">🦺 Mandor: '+mn.nama+'</div>';
-      html += '<div class="table-wrap"><table style="font-size:11px"><thead><tr>'
-           + '<th style="min-width:120px">Pekerja</th>';
-      // Header tanggal
-      for(var i=0;i<7;i++){
-        var sp=week.start.split('-').map(Number);
-        var dt=new Date(sp[0],sp[1]-1,sp[2]+i);
-        html += '<th style="text-align:center;width:40px">'+HARI_PD[i]+'<br>'+dt.getDate()+'</th>';
+      html += '<div style="background:#eef2f5; padding:8px; font-weight:bold; font-size:12px; border-bottom:2px solid #ccc;">🦺 Mandor: ' + mn.nama + '</div>';
+      html += '<table style="width:100%; border-collapse:collapse; font-size:11px;"><thead>'
+           + '<tr style="background:#f9f9f9;"><th style="border:1px solid #ddd; padding:5px;">Pekerja</th>';
+      
+      // Header Tanggal
+      for(var i=0; i<7; i++) {
+        var sp = week.start.split('-').map(Number);
+        var dt = new Date(sp[0], sp[1]-1, sp[2]+i);
+        html += '<th style="border:1px solid #ddd; padding:5px; text-align:center;">' + HARI_PD[i] + '<br>' + dt.getDate() + '</th>';
       }
-      html += '<th>Total</th><th>Upah</th><th>Total</th><th style="min-width:150px">Laporan Pekerjaan</th></tr></thead><tbody>';
+      html += '<th style="border:1px solid #ddd; padding:5px;">Total</th><th style="border:1px solid #ddd; padding:5px;">Laporan</th></tr></thead><tbody>';
 
-      Object.keys(byPk).forEach(function(pkId){
+      Object.keys(byPk).forEach(function(pkId) {
         var recs = byPk[pkId];
-        var pk = DB.pekerja.find(function(p){ return String(p.id)===pkId; }) || {nama:'?', upah:0};
-        var tH = recs.reduce(function(s,a){ return s+(Number(a.hariKerja)||0); },0);
-        var tB = recs.reduce(function(s,a){ return s+(Number(a.total)||0); },0);
-
-        html += '<tr><td style="font-weight:700">'+pk.nama+'</td>';
+        var pk = DB.pekerja.find(function(p) { return String(p.id) === pkId; }) || { nama: '?' };
+        html += '<tr><td style="border:1px solid #ddd; padding:5px; font-weight:bold;">' + pk.nama + '</td>';
         
-        // Baris hari
-        for(var i=0;i<7;i++){
-          var sp=week.start.split('-').map(Number);
-          var dt=new Date(sp[0],sp[1]-1,sp[2]+i);
-          var tgl=dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
-          var a = recs.find(function(r){ return r.tanggal===tgl; });
+        for(var i=0; i<7; i++) {
+          var sp = week.start.split('-').map(Number);
+          var dt = new Date(sp[0], sp[1]-1, sp[2]+i);
+          var tgl = dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate());
+          var a = recs.find(function(r) { return r.tanggal === tgl; });
           
-          if (!a) { html += '<td style="text-align:center;color:#eee">—</td>'; }
+          if (!a) { html += '<td style="border:1px solid #ddd; background:#fafafa;"></td>'; }
           else {
-            html += '<td style="text-align:center;padding:2px"><div style="display:inline-block;position:relative;width:32px;height:28px;">'
-                 + '<span style="position:absolute;top:0;right:2px;font-weight:700">'+a.hariKerja+'</span>'
-                 + '<svg style="position:absolute;top:0;left:0;width:32px;height:28px"><line x1="0" y1="28" x2="32" y2="0" stroke="#999" stroke-width="1"/></svg>'
-                 + '<span style="position:absolute;bottom:0;left:2px;font-weight:700;color:#1d4ed8">'+a.lemburJam+'</span>'
-                 + '</div></td>';
+            // CSS Diagonal: HK (Kanan Atas) / Lembur (Kiri Bawah)
+            html += '<td style="border:1px solid #ddd; padding:0; position:relative; width:40px; height:35px; background:linear-gradient(to top right, transparent 49%, #ccc 49%, #ccc 51%, transparent 51%);">'
+                 + '<span style="position:absolute; top:2px; right:4px; font-weight:bold;">' + (a.hariKerja || 0) + '</span>'
+                 + '<span style="position:absolute; bottom:2px; left:4px; color:blue; font-weight:bold;">' + (a.lemburJam || 0) + '</span>'
+                 + '</td>';
           }
         }
-
-        // Laporan
-        var lapHtml = recs.map(function(r){
-            var items=[]; try{items=JSON.parse(r.laporanItems||'[]');}catch(e){}
-            return items.length ? items.map(function(l){ return '<div style="margin-bottom:4px;border-bottom:1px solid #f0f0f0">'+l.jamMulai+'-'+l.jamSelesai+': '+l.uraian+'</div>'; }).join('') : (r.deskripsi ? '<div style="margin-bottom:4px">'+r.deskripsi+'</div>' : '');
-        }).join('');
-
-        html += '<td style="text-align:center;font-weight:700">'+tH+'</td>'
-             + '<td>'+rupiah(pk.upah)+'</td>'
-             + '<td style="font-weight:700">'+rupiah(tB)+'</td>'
-             + '<td>'+lapHtml+'</td></tr>';
+        
+        var totalHK = recs.reduce(function(s,r){ return s + (Number(r.hariKerja)||0); }, 0);
+        var lap = recs.map(function(r){ return r.deskripsi || ''; }).join(', ');
+        html += '<td style="border:1px solid #ddd; padding:5px; text-align:center;">' + totalHK + '</td>'
+             + '<td style="border:1px solid #ddd; padding:5px;">' + lap + '</td></tr>';
       });
-      html += '</tbody></table></div>';
+      html += '</tbody></table>';
     });
     html += '</div>';
   });
