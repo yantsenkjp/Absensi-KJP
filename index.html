@@ -237,7 +237,7 @@ tr:hover td{background:#fafafa}
         <div class="stat-card blue"><div class="stat-label">Absensi Minggu Ini</div><div class="stat-value" id="s-absensi">-</div></div>
       </div>
       <div class="card">
-        <div class="card-title">📋 Absensi Terbaru Hari Ini</div>
+        <div class="card-title">📋 Absensi & Laporan Terbaru</div>
         <div id="dash-absensi"><div class="loading-full"><div class="spinner"></div>Memuat...</div></div>
       </div>
     </div>
@@ -278,8 +278,15 @@ tr:hover td{background:#fafafa}
             <input type="time" id="ab-pulang" value="17:00" onchange="hitungDurasi()">
           </div>
           <div class="fg full">
-            <div class="alert alert-info show" id="ab-kalk" style="margin-bottom:14px"></div>
+            <div class="alert alert-info show" id="ab-kalk" style="margin-bottom:0"></div>
           </div>
+        </div>
+        <div class="mb-12">
+          <div class="flex-center justify-between mb-12">
+            <label style="font-size:12px;font-weight:700;color:#555">Laporan Pekerjaan</label>
+            <button class="btn btn-outline btn-sm" onclick="tambahLaporan()">+ Tambah Laporan</button>
+          </div>
+          <div id="laporan-wrap"></div>
         </div>
         <div class="flex gap-8">
           <button class="btn btn-primary" onclick="simpanAbsensi()" id="btn-ab-simpan">💾 Simpan Absensi</button>
@@ -470,6 +477,7 @@ var GS_URL = '';
 // In-memory store
 var DB = { proyek:[], mandor:[], pekerja:[], sm:[], absensi:[] };
 var SM_LOGGED = null;
+var lapCount = 0;
 var editIds = { pekerja:'', mandor:'', sm:'', proyek:'', absensi:'' };
 
 var BLN  = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
@@ -541,7 +549,7 @@ function goto(page) {
 }
 
 // ═══════════════════════════════════════════════════════
-// API — JSONP GET + fetch POST
+// API — Menggunakan FETCH POST (Anti Network Error)
 // ═══════════════════════════════════════════════════════
 function apiGet(params, cb) {
   if (!GS_URL) { cb({ok:false, error:'URL belum dikonfigurasi'}); return; }
@@ -570,6 +578,7 @@ function apiGet(params, cb) {
 function apiPost(body, cb) {
   if (!GS_URL) { cb({ok: false, error: 'URL belum dikonfigurasi'}); return; }
   
+  // MENGGUNAKAN FETCH POST AGAR TIDAK KENA LIMIT URL LENGTH
   fetch(GS_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -654,7 +663,7 @@ function setBadge(state) {
 }
 
 // ═══════════════════════════════════════════════════════
-// SETTINGS / SCRIPT BACKEND
+// SETTINGS
 // ═══════════════════════════════════════════════════════
 var SCRIPT_CODE = [
 "// ═══════════════════════════════════════════════════════════",
@@ -691,7 +700,6 @@ var SCRIPT_CODE = [
 "  var callback = p.callback || '';",
 "  var result;",
 "",
-"  // Handle write actions via payload param (JSONP POST workaround for CORS)",
 "  if (p.payload) {",
 "    try {",
 "      var body = JSON.parse(decodeURIComponent(p.payload));",
@@ -758,7 +766,6 @@ var SCRIPT_CODE = [
 "    .setMimeType(ContentService.MimeType.JSON);",
 "}",
 "",
-"// handleWrite: dipakai oleh doGet (JSONP) dan doPost (direct)",
 "function handleWrite(body) {",
 "  var action = body.action || '';",
 "  var result;",
@@ -829,7 +836,6 @@ var SCRIPT_CODE = [
 "}",
 "",
 "function upsert(sheetName, headers, row) {",
-"  var key = Object.keys(SHEETS).find(function(k){ return SHEETS[k] === sheetName; });",
 "  var sheet = getOrCreateSheet(sheetName, headers);",
 "  var last  = sheet.getLastRow();",
 "  var id    = row.id || '';",
@@ -875,8 +881,7 @@ var SCRIPT_CODE = [
 "  if (idx < 0) return 'not_found';",
 "  sheet.deleteRow(idx + 2);",
 "  return 'deleted';",
-"}",
-""
+"}"
 ].join('\n');
 
 function simpanUrl() {
@@ -959,60 +964,62 @@ function renderDashboardData() {
   document.getElementById('s-proyek').textContent   = DB.proyek.filter(function(p){ return p.status==='aktif'; }).length;
   document.getElementById('s-absensi').textContent  = absenMggu;
 
-  var todayAbs = DB.absensi.filter(function(a){ return a.tanggal===today; })
-    .sort(function(a,b){ return (b.createdAt||'').localeCompare(a.createdAt||''); });
+  // MENGAMBIL 15 ABSENSI SECARA GLOBAL BERDASARKAN WAKTU, BUKAN HANYA HARI INI
+  var recentAbs = DB.absensi.slice().sort(function(a,b){
+    var tA = a.createdAt || (a.tanggal+'T'+a.masuk);
+    var tB = b.createdAt || (b.tanggal+'T'+b.masuk);
+    return tB.localeCompare(tA);
+  }).slice(0, 15);
 
   var el = document.getElementById('dash-absensi');
   var refreshBtn = '<div style="display:flex;justify-content:flex-end;margin-bottom:10px">'
     +'<button class="btn btn-ghost btn-sm" onclick="renderDashboard()">🔄 Refresh</button></div>';
 
-  if (!todayAbs.length) {
-    el.innerHTML = refreshBtn+'<div class="empty-state">Belum ada absensi hari ini</div>';
+  if (!recentAbs.length) {
+    el.innerHTML = refreshBtn+'<div class="empty-state">Belum ada data absensi</div>';
     return;
   }
   
-  var rows = todayAbs.map(function(a){
+  var rows = recentAbs.map(function(a){
     var pk = DB.pekerja.find(function(p){ return String(p.id)===String(a.pekerjaId); })||{};
     var mn = DB.mandor.find(function(m){  return String(m.id)===String(a.mandorId);  })||{};
     var pr = DB.proyek.find(function(p){  return String(p.id)===String(a.proyekId);  })||{};
     
-    // Format Laporan Pekerjaan
-    var lapsHtml = '<span style="color:#ccc;font-size:11px">—</span>';
+    // Format Laporan Pekerjaan (Spesifik dipisah)
+    var lapsHtml = '<span style="color:#ccc;font-size:11px">Belum ada laporan</span>';
     try {
       var li = JSON.parse(a.laporanItems||'[]');
       if(li.length) {
         lapsHtml = '<ul style="margin:0;padding-left:14px;font-size:11px;color:#444">'
-          + li.map(function(l){ return '<li><strong>'+l.jamMulai+'-'+l.jamSelesai+':</strong> '+l.uraian+'</li>'; }).join('')
+          + li.map(function(l){ return '<li style="margin-bottom:4px"><strong>'+l.jamMulai+'-'+l.jamSelesai+':</strong> '+l.uraian+'</li>'; }).join('')
           + '</ul>';
       } else if(a.deskripsi) { lapsHtml = '<div style="font-size:11px">'+a.deskripsi+'</div>'; }
     } catch(e) { if(a.deskripsi) lapsHtml = '<div style="font-size:11px">'+a.deskripsi+'</div>'; }
 
-    // Format Foto Thumbnail
-    var fotoHtml = '';
+    // Format Foto Thumbnail (Spesifik dipisah)
+    var fotoHtml = '<span style="color:#ccc;font-size:11px">Tidak ada foto</span>';
     try {
       var fotos = JSON.parse(a.foto||'[]');
       if(fotos.length) {
-        fotoHtml = '<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">'
-          + fotos.map(function(f){ return '<img src="'+f+'" style="width:40px;height:40px;object-fit:cover;border-radius:4px;border:1px solid #ddd;cursor:pointer" onclick="window.open(\''+f+'\',\'_blank\')">'; }).join('')
+        fotoHtml = '<div style="display:flex;gap:4px;flex-wrap:wrap">'
+          + fotos.map(function(f){ return '<img src="'+f+'" style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid #ddd;cursor:pointer" onclick="window.open(\''+f+'\',\'_blank\')">'; }).join('')
           + '</div>';
       }
     } catch(e){}
 
-    var combinedLaporan = '<div style="min-width:180px;max-width:280px">' + lapsHtml + fotoHtml + '</div>';
-
     return '<tr>'
       +'<td><strong>'+(pk.nama||'?')+'</strong><br><span class="text-sm text-gray">'+(pk.jabatan||'')+'</span></td>'
-      +'<td class="text-sm">'+(mn.nama||'?')+'</td>'
-      +'<td class="text-sm">'+(pr.nama||'?')+'</td>'
-      +'<td class="text-sm">'+a.masuk+' – '+a.pulang+'</td>'
-      +'<td>'+combinedLaporan+'</td>'
+      +'<td class="text-sm"><strong>'+(pr.nama||'?')+'</strong><br><span style="color:#888">Mandor: '+(mn.nama||'?')+'</span></td>'
+      +'<td class="text-sm" style="white-space:nowrap">'+fmtTgl(a.tanggal)+'<br><span style="color:#888">'+a.masuk+' – '+(a.pulang||'?')+'</span></td>'
+      +'<td style="min-width:180px;max-width:280px">'+lapsHtml+'</td>'
+      +'<td style="min-width:120px">'+fotoHtml+'</td>'
       +'<td><span class="badge badge-'+a.status+'">'+a.status+'</span></td>'
       +'</tr>';
   }).join('');
 
   el.innerHTML = refreshBtn
     + '<div class="table-wrap"><table><thead><tr>'
-    + '<th>Pekerja</th><th>Mandor</th><th>Proyek</th><th>Jam</th><th>Laporan & Foto</th><th>Status</th>'
+    + '<th>Pekerja</th><th>Proyek / Mandor</th><th>Tanggal & Jam</th><th>Laporan Pekerjaan</th><th>Foto</th><th>Status</th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
 }
 
@@ -1024,6 +1031,7 @@ function initAbsensi() {
   selPr.innerHTML = '<option value="">— Pilih Proyek —</option>'
     + DB.proyek.filter(function(p){ return p.status==='aktif'; }).map(function(p){ return '<option value="'+p.id+'">'+p.nama+'</option>'; }).join('');
   setFieldVal('ab-tanggal', todayStr());
+  resetLaporan();
   hitungDurasi(); renderAbsensiHariIni();
 }
 function onAbProyekChange() {
@@ -1048,6 +1056,29 @@ function hitungDurasi() {
     +(lj>0?' &nbsp;·&nbsp; Lembur: <strong>'+lj.toFixed(1)+'j</strong>':'') +(pk?' &nbsp;·&nbsp; Estimasi: <strong>'+rupiah(total)+'</strong>':'');
 }
 
+function resetLaporan() {
+  lapCount=0;
+  document.getElementById('laporan-wrap').innerHTML='';
+  tambahLaporan();
+}
+function tambahLaporan() {
+  lapCount++; var id='lap'+lapCount; var masuk=getFieldVal('ab-masuk')||'08:00'; var pulang=getFieldVal('ab-pulang')||'17:00';
+  var wrap=document.getElementById('laporan-wrap'); var div=document.createElement('div'); div.id=id;
+  div.style.cssText='background:#f8faff;border:1.5px solid #dbeafe;border-radius:10px;padding:12px;margin-bottom:10px';
+  div.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="font-size:12px;font-weight:700;color:#1d4ed8">Laporan #'+lapCount+'</span>'+(lapCount>1?'<button onclick="hapusLaporan(\''+id+'\')" style="background:#fee2e2;border:none;border-radius:6px;padding:4px 10px;font-size:12px;color:#dc2626;cursor:pointer">✕ Hapus</button>':'')+'</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px"><div class="fg"><label style="font-size:11px">Jam Mulai</label><input type="time" id="'+id+'-mulai" value="'+masuk+'"></div><div class="fg"><label style="font-size:11px">Jam Selesai</label><input type="time" id="'+id+'-selesai" value="'+pulang+'"></div></div><div class="fg"><label style="font-size:11px">Uraian Pekerjaan</label><textarea id="'+id+'-uraian" style="min-height:64px" placeholder="Contoh: Pemasangan lampu LED..."></textarea></div>';
+  wrap.appendChild(div);
+}
+function hapusLaporan(id) { var el=document.getElementById(id); if(el) el.remove(); }
+function getLaporanItems() {
+  var items=[];
+  document.querySelectorAll('#laporan-wrap [id^="lap"]').forEach(function(div){
+    var id=div.id; if(!id.match(/^lap\d+$/)) return;
+    var mulai=(document.getElementById(id+'-mulai')||{}).value||''; var selesai=(document.getElementById(id+'-selesai')||{}).value||'';
+    var uraian=((document.getElementById(id+'-uraian')||{}).value||'').trim();
+    if(uraian) items.push({jamMulai:mulai,jamSelesai:selesai,uraian:uraian});
+  }); return items;
+}
+
 function simpanAbsensi() {
   var proyekId  = getFieldVal('ab-proyek'); var mandorId  = getFieldVal('ab-mandor');
   var pekerjaId = getFieldVal('ab-pekerja'); var tanggal   = getFieldVal('ab-tanggal');
@@ -1064,13 +1095,15 @@ function simpanAbsensi() {
 
   var pk    = DB.pekerja.find(function(p){ return String(p.id)===pekerjaId; })||{};
   var hasil = hitungAbsensi(masuk, pulang, Number(pk.upah)||0, Number(pk.lembur)||0);
+  var lapItems = getLaporanItems();
+  var deskrip  = lapItems.map(function(l){ return '['+l.jamMulai+'-'+l.jamSelesai+'] '+l.uraian; }).join(' | ');
 
   var row = {
     id: uid(), proyekId:proyekId, mandorId:mandorId, pekerjaId:pekerjaId,
     tanggal:tanggal, masuk:masuk, pulang:pulang,
     hariKerja:hasil.hk, lemburJam:hasil.lj,
     upahHarian:Number(pk.upah)||0, upahLembur:Number(pk.lembur)||0, total:hasil.total,
-    deskripsi:'', laporanItems:'[]', foto:'[]',
+    deskripsi:deskrip, laporanItems:JSON.stringify(lapItems), foto:'[]',
     status:'pending', catatanReject:'', approvedBy:'', approvedAt:'',
     createdAt:new Date().toISOString()
   };
@@ -1088,7 +1121,8 @@ function simpanAbsensi() {
 }
 function resetAbsensi() {
   setFieldVal('ab-proyek',''); setFieldVal('ab-mandor',''); setFieldVal('ab-pekerja','');
-  setFieldVal('ab-tanggal', todayStr()); setFieldVal('ab-masuk','08:00'); setFieldVal('ab-pulang','17:00'); hitungDurasi();
+  setFieldVal('ab-tanggal', todayStr()); setFieldVal('ab-masuk','08:00'); setFieldVal('ab-pulang','17:00'); 
+  resetLaporan(); hitungDurasi();
 }
 function renderAbsensiHariIni() {
   var el = document.getElementById('list-absensi-hari-ini'); el.innerHTML='<div class="loading-full"><div class="spinner"></div></div>';
