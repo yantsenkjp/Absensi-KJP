@@ -28,7 +28,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .setup h2{font-size:16px;font-weight:700;margin-bottom:8px}
 .setup p{font-size:13px;color:#666;line-height:1.7;margin-bottom:14px}
 
-/* ── TABS (3 tab) ── */
+/* ── TABS ── */
 .tabs{display:flex;margin:12px 12px 0;background:#fff;border-radius:10px;border:1px solid #e8e8e8;overflow:hidden}
 .tab{flex:1;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#888;cursor:pointer;border-bottom:3px solid transparent;-webkit-tap-highlight-color:transparent;touch-action:manipulation;gap:2px;line-height:1.2}
 .tab .tab-ico{font-size:18px}
@@ -42,7 +42,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .fg label{font-size:13px;font-weight:600;color:#444}
 .opt{font-weight:400;color:#bbb;font-size:12px}
 
-/* 16px wajib — cegah auto-zoom Android */
 input,select,textarea{
   display:block;width:100%;padding:0 14px;height:50px;
   border:1.5px solid #ddd;border-radius:10px;
@@ -123,9 +122,8 @@ select{
 .upload-tap .hint{font-size:11px;color:#bbb}
 .media-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
 .media-th{position:relative;border-radius:8px;overflow:hidden;aspect-ratio:1;background:#eee}
-.media-th img,.media-th video{width:100%;height:100%;object-fit:cover}
+.media-th img{width:100%;height:100%;object-fit:cover}
 .del-media{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:28px;height:28px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation}
-.vbadge{position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.65);color:#fff;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700}
 
 /* ── TOMBOL SIMPAN ── */
 .btn-simpan{display:block;width:100%;height:54px;background:#C8102E;color:#fff;border:none;border-radius:12px;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:background .15s}
@@ -195,10 +193,10 @@ select{
     <span class="tab-ico">✏️</span>Input Absen
   </div>
   <div class="tab" onclick="switchTab('foto')">
-    <span class="tab-ico">📸</span>Foto dan Laporan
+    <span class="tab-ico">📸</span>Foto &amp; Laporan
   </div>
   <div class="tab" onclick="switchTab('riwayat')">
-    <span class="tab-ico">📅</span>Riwayat input
+    <span class="tab-ico">📅</span>Riwayat
   </div>
 </div>
 
@@ -260,20 +258,19 @@ select{
               <input type="time" id="f-pulang" value="17:00" onchange="hitungDurasi()">
             </div>
           </div>
+          <button class="btn-simpan" id="btn-simpan-manual" onclick="simpanJamManual()" style="height:44px;font-size:14px;margin-top:12px">💾 Update Jam Manual</button>
         </div>
       </div>
     </div>
 
     <div class="kalk" id="kalk"></div>
-
-    <button class="btn-simpan" id="btn-simpan">💾 Simpan Absensi</button>
   </div>
 </div>
 
 <div id="tab-foto" class="hidden">
   <div class="card">
-    <div style="font-size:15px;font-weight:700;margin-bottom:6px">📸 Foto dan Laporan Pekerjaan</div>
-    <div style="font-size:12px;color:#888;margin-bottom:16px;line-height:1.5">Isi laporan dan foto <strong>setelah</strong> input absen hari ini tersimpan.</div>
+    <div style="font-size:15px;font-weight:700;margin-bottom:6px">📸 Foto &amp; Laporan Pekerjaan</div>
+    <div style="font-size:12px;color:#888;margin-bottom:16px;line-height:1.5">Isi laporan dan foto <strong>setelah</strong> Check In / Check Out.</div>
 
     <div class="alert" id="alert-foto"></div>
 
@@ -283,7 +280,7 @@ select{
     </div>
 
     <div class="banner-info hidden" id="banner-no-absen">
-      ⚠️ Belum ada absensi hari ini. Silakan input absen di tab <strong>Input Absen</strong> terlebih dahulu.
+      ⚠️ Belum ada absensi hari ini. Silakan Check In di tab <strong>Input Absen</strong> terlebih dahulu.
     </div>
 
     <div id="foto-form-wrap">
@@ -294,13 +291,13 @@ select{
       <div id="lap-wrap"></div>
 
       <div class="fg" style="margin-top:8px">
-        <label>Foto / Video <span class="opt">opsional</span></label>
+        <label>Foto <span class="opt">maks 3 foto</span></label>
         <div class="upload-tap" id="upload-tap">
           <div class="ico">📷</div>
           <div class="txt">Tap untuk ambil foto / pilih file</div>
-          <div class="hint">JPG, PNG, MP4 — maks 50MB/file</div>
+          <div class="hint">JPG, PNG — Otomatis dikompres</div>
         </div>
-        <input type="file" id="f-files" multiple accept="image/*,video/*" style="display:none">
+        <input type="file" id="f-files" multiple accept="image/*" style="display:none">
         <div class="media-grid" id="media-grid"></div>
       </div>
 
@@ -311,7 +308,7 @@ select{
 
 <div id="tab-riwayat" class="hidden">
   <div class="card">
-    <div style="font-size:15px;font-weight:700;margin-bottom:14px">📅 Riwayat Input Minggu Ini</div>
+    <div style="font-size:15px;font-weight:700;margin-bottom:14px">📅 Riwayat Minggu Ini</div>
     <div class="fg"><label>Filter Pekerja</label>
       <select id="hist-pk"><option value="">Semua Pekerja</option></select></div>
     <button class="btn-simpan" onclick="muatRiwayat()" style="height:42px;font-size:14px;margin-bottom:14px;background:#1d4ed8">
@@ -330,7 +327,7 @@ var MASTER    = {proyek:[], mandor:[], pekerja:[]};
 var RIWAYAT   = [];
 var mediaFiles= [];
 var lapCount  = 0;
-var proyek_tz = null; // timezone proyek (dari IP geolocation)
+var proyek_tz = null;
 
 var BLN  = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
 var HARI = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
@@ -372,7 +369,7 @@ function normTgl(v){
   if(!v) return '';
   if(typeof v==='string'){
     if(v.length>10&&v.indexOf('T')>0) return v.split('T')[0];
-    if(v.startsWith('1899-12-30')){var t=new Date(v);return pad(t.getHours())+pad(t.getMinutes());}
+    if(v.startsWith('1899-12-30')){var t=new Date(v);return pad(t.getHours())+':'+pad(t.getMinutes());}
     return v;
   }
   if(v instanceof Date){
@@ -394,6 +391,7 @@ function normAbsensi(arr){
     a.proyekId =String(a.proyekId||'');
     a.mandorId =String(a.mandorId||'');
     a.pekerjaId=String(a.pekerjaId||'');
+    a.foto     =String(a.foto||'[]');
     return a;
   });
 }
@@ -483,32 +481,26 @@ function init(){
 
   document.getElementById('btn-setup').addEventListener('click',simpanSetup);
   document.getElementById('btn-add-lap').addEventListener('click',tambahLap);
-  document.getElementById('btn-simpan').addEventListener('click',simpan);
   document.getElementById('btn-simpan-laporan').addEventListener('click',simpanLaporan);
   document.getElementById('upload-tap').addEventListener('click',function(){document.getElementById('f-files').click();});
   document.getElementById('f-files').addEventListener('change',function(){handleFiles(this.files);});
-  document.getElementById('f-proyek').addEventListener('change',onProyekChange);
-  document.getElementById('f-pekerja').addEventListener('change',onPekerjaChange);
-  document.getElementById('f-tanggal').addEventListener('change',function(){hitungDurasi();renderWeek();});
+  
+  document.getElementById('f-proyek').addEventListener('change',function(){ onProyekChange(); checkAbsensiState(); });
+  document.getElementById('f-pekerja').addEventListener('change',function(){ onPekerjaChange(); checkAbsensiState(); });
+  document.getElementById('f-tanggal').addEventListener('change',function(){ checkAbsensiState(); hitungDurasi(); renderWeek(); });
+  
   document.getElementById('f-masuk').addEventListener('change',hitungDurasi);
   document.getElementById('f-pulang').addEventListener('change',hitungDurasi);
   document.getElementById('hist-pk').addEventListener('change',renderRiwayat);
   document.getElementById('foto-absensi-sel').addEventListener('change',onFotoAbsensiChange);
 
-  if(GS_URL){
-    muatMaster();
-  } else {
-    show('setup-panel');
-    setStatus('Masukkan URL Apps Script untuk memulai','warn');
-  }
+  if(GS_URL){ muatMaster(); } 
+  else { show('setup-panel'); setStatus('Masukkan URL Apps Script untuk memulai','warn'); }
 }
 
 function simpanSetup(){
   var url=getVal('setup-url').split('?')[0];
-  if(!url||!url.startsWith('http')){
-    showAlert('alert-setup','URL tidak valid. Harus dimulai dengan https://','err');
-    return;
-  }
+  if(!url||!url.startsWith('http')){ showAlert('alert-setup','URL tidak valid. Harus dimulai dengan https://','err'); return; }
   GS_URL=url;
   try{sessionStorage.setItem(LS_URL,url);}catch(e){}
   document.getElementById('btn-setup').disabled=true;
@@ -516,17 +508,13 @@ function simpanSetup(){
   muatMaster();
 }
 
-// ── MUAT MASTER DATA ──
 function muatMaster(){
   setStatus('Memuat data dari Google Sheets...','info');
   apiGet({action:'get_master'},function(res){
     document.getElementById('btn-setup').disabled=false;
     document.getElementById('btn-setup').textContent='Simpan & Muat Data';
     if(!res.ok){
-      setStatus('Gagal: '+res.error,'err');
-      showAlert('alert-setup',res.error,'err');
-      show('setup-panel');
-      return;
+      setStatus('Gagal: '+res.error,'err'); showAlert('alert-setup',res.error,'err'); show('setup-panel'); return;
     }
     MASTER.proyek =(res.data.proyek ||[]).map(function(r){Object.keys(r).forEach(function(k){if(r[k] instanceof Date)r[k]=normTgl(r[k]);else if(r[k]===null||r[k]===undefined)r[k]='';});return r;});
     MASTER.mandor =(res.data.mandor ||[]).map(function(r){Object.keys(r).forEach(function(k){if(r[k] instanceof Date)r[k]=normTgl(r[k]);else if(r[k]===null||r[k]===undefined)r[k]='';});return r;});
@@ -535,7 +523,11 @@ function muatMaster(){
     var aktif=MASTER.proyek.filter(function(p){return String(p.status).toLowerCase()==='aktif';});
     setStatus('✅ Terhubung — '+MASTER.pekerja.length+' pekerja, '+aktif.length+' proyek aktif','ok');
     hide('setup-panel');
-    tampilkanForm();
+    
+    // Muat riwayat awal
+    muatRiwayatSilent(function(){
+      tampilkanForm();
+    });
   });
 }
 
@@ -548,10 +540,9 @@ function tampilkanForm(){
   setVal('f-tanggal',todayStr());
   show('main-tabs');show('tab-absen');
   initLap();hitungDurasi();
-  resetCheckInOut();
+  checkAbsensiState();
 }
 
-// ── DROPDOWN EVENTS ──
 function onProyekChange(){
   var pid=getVal('f-proyek');
   var pr=MASTER.proyek.find(function(p){return p.id===pid;});
@@ -564,7 +555,6 @@ function onProyekChange(){
   document.getElementById('pk-info').className='pk-info';
   document.getElementById('wk-box').className='wk-box';
 
-  // Deteksi timezone berdasarkan lokasi proyek
   if(pr&&pr.lokasi) detectTimezone(pr.lokasi);
 }
 
@@ -581,148 +571,215 @@ function onPekerjaChange(){
   renderWeek();
 }
 
-// ── TIMEZONE DETEKSI (berdasarkan lokasi proyek via WorldTimeAPI) ──
+// ── TIMEZONE DETEKSI ──
 function detectTimezone(lokasiProyek){
-  // Mapping kota Indonesia ke timezone
-  var tzMap={
-    'bali':'Asia/Makassar','jakarta':'Asia/Jakarta','bandung':'Asia/Jakarta',
-    'surabaya':'Asia/Jakarta','medan':'Asia/Jakarta','makassar':'Asia/Makassar',
-    'manado':'Asia/Makassar','jayapura':'Asia/Jayapura','pontianak':'Asia/Jakarta',
-    'balikpapan':'Asia/Makassar','lombok':'Asia/Makassar'
-  };
+  var tzMap={'bali':'Asia/Makassar','jakarta':'Asia/Jakarta','bandung':'Asia/Jakarta','surabaya':'Asia/Jakarta','medan':'Asia/Jakarta','makassar':'Asia/Makassar','manado':'Asia/Makassar','jayapura':'Asia/Jayapura','pontianak':'Asia/Jakarta','balikpapan':'Asia/Makassar','lombok':'Asia/Makassar'};
   var lokLower=(lokasiProyek||'').toLowerCase();
-  var tz=null;
-  Object.keys(tzMap).forEach(function(key){
-    if(lokLower.indexOf(key)>=0) tz=tzMap[key];
-  });
+  var tz=null; Object.keys(tzMap).forEach(function(key){if(lokLower.indexOf(key)>=0) tz=tzMap[key];});
   proyek_tz = tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
   updateTzLabel();
 }
-
 function getJamProyek(){
-  // Ambil jam sesuai timezone proyek (bukan jam HP)
   var tz = proyek_tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
   var now = new Date();
   try {
-    var fmt = new Intl.DateTimeFormat('id-ID',{
-      timeZone: tz,
-      hour:'2-digit', minute:'2-digit', second:'2-digit',
-      hour12: false
-    });
-    var parts = fmt.formatToParts(now);
-    var h='00',m='00';
+    var fmt = new Intl.DateTimeFormat('id-ID',{timeZone: tz,hour:'2-digit', minute:'2-digit', hour12: false});
+    var parts = fmt.formatToParts(now); var h='00',m='00';
     parts.forEach(function(p){ if(p.type==='hour') h=p.value; if(p.type==='minute') m=p.value; });
     return h+':'+m;
-  } catch(e){
-    // Fallback: jam device
-    return pad(now.getHours())+':'+pad(now.getMinutes());
-  }
+  } catch(e){ return pad(now.getHours())+':'+pad(now.getMinutes()); }
 }
-
 function getTanggalProyek(){
   var tz = proyek_tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
   var now = new Date();
   try {
-    var fmt = new Intl.DateTimeFormat('id-ID',{
-      timeZone: tz,
-      year:'numeric', month:'2-digit', day:'2-digit'
-    });
-    var parts = fmt.formatToParts(now);
-    var y='',m='',d='';
-    parts.forEach(function(p){
-      if(p.type==='year') y=p.value;
-      if(p.type==='month') m=p.value;
-      if(p.type==='day') d=p.value;
-    });
+    var fmt = new Intl.DateTimeFormat('id-ID',{timeZone: tz,year:'numeric', month:'2-digit', day:'2-digit'});
+    var parts = fmt.formatToParts(now); var y='',m='',d='';
+    parts.forEach(function(p){ if(p.type==='year') y=p.value; if(p.type==='month') m=p.value; if(p.type==='day') d=p.value; });
     return y+'-'+m+'-'+d;
-  } catch(e){
-    return todayStr();
-  }
+  } catch(e){ return todayStr(); }
 }
-
 function getTzLabel(){
   var tz = proyek_tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
   var short = tz.split('/').pop().replace(/_/g,' ');
-  // Map ke nama zona waktu Indonesia
   var map={'Jakarta':'WIB','Makassar':'WITA','Jayapura':'WIT'};
   return map[short] || short;
 }
-
 function updateTzLabel(){
   var lbl = '🌐 '+getTzLabel();
-  var el1=document.getElementById('cin-tz');
-  var el2=document.getElementById('cout-tz');
-  if(el1) el1.textContent=lbl;
-  if(el2) el2.textContent=lbl;
+  if(document.getElementById('cin-tz')) document.getElementById('cin-tz').textContent=lbl;
+  if(document.getElementById('cout-tz')) document.getElementById('cout-tz').textContent=lbl;
 }
 
-// ── CHECK IN / CHECK OUT ──
+// ── REALTIME CHECK IN / OUT ──
 function resetCheckInOut(){
-  setVal('f-masuk','');
-  setVal('f-pulang','');
-  var cinDisp=document.getElementById('cin-display');
-  var coutDisp=document.getElementById('cout-display');
-  if(cinDisp){cinDisp.textContent='Belum';cinDisp.className='cio-time empty';}
-  if(coutDisp){coutDisp.textContent='Belum';coutDisp.className='cio-time empty';}
+  setVal('f-masuk',''); setVal('f-pulang','');
+  document.getElementById('cin-display').textContent='Belum';
+  document.getElementById('cout-display').textContent='Belum';
+  document.getElementById('cin-display').className='cio-time empty';
+  document.getElementById('cout-display').className='cio-time empty';
   document.getElementById('card-cin').className='cio-card';
   document.getElementById('card-cout').className='cio-card';
   document.getElementById('btn-cin').disabled=false;
+  document.getElementById('btn-cin').textContent='Check In';
   document.getElementById('btn-cout').disabled=true;
+  document.getElementById('btn-cout').textContent='Check Out';
   document.getElementById('kalk').className='kalk';
   updateTzLabel();
 }
 
+function checkAbsensiState(){
+  var pid = getVal('f-pekerja');
+  var tgl = getVal('f-tanggal');
+  var proyekId = getVal('f-proyek');
+  resetCheckInOut();
+  if(!pid || !tgl || !proyekId) return;
+
+  var a = RIWAYAT.find(function(x){return String(x.pekerjaId)===String(pid) && x.tanggal===tgl && String(x.proyekId)===String(proyekId);});
+  if(a) {
+    setVal('f-masuk', a.masuk);
+    setVal('f-pulang', a.pulang);
+    if(a.masuk) {
+      document.getElementById('cin-display').textContent = a.masuk;
+      document.getElementById('cin-display').className = 'cio-time';
+      document.getElementById('card-cin').className = 'cio-card done-in';
+      document.getElementById('btn-cin').disabled = true;
+      document.getElementById('btn-cin').textContent = '✓ Checked In';
+      document.getElementById('btn-cout').disabled = false;
+    }
+    if(a.pulang) {
+      document.getElementById('cout-display').textContent = a.pulang;
+      document.getElementById('cout-display').className = 'cio-time';
+      document.getElementById('card-cout').className = 'cio-card done-out';
+      document.getElementById('btn-cout').textContent = '🔄 Update Out';
+    }
+    hitungDurasi();
+  }
+}
+
 function doCheckIn(){
   var proyekId=getVal('f-proyek');
+  var mandorId=getVal('f-mandor');
   var pekerjaId=getVal('f-pekerja');
+  var tgl=getVal('f-tanggal');
+
   if(!proyekId) return showAlert('alert-main','Pilih Proyek terlebih dahulu','err');
-  if(!pekerjaId) return showAlert('alert-main','Pilih Nama Pekerja terlebih dahulu','err');
+  if(!mandorId) return showAlert('alert-main','Pilih Mandor','err');
+  if(!pekerjaId) return showAlert('alert-main','Pilih Nama Pekerja','err');
 
   var jam=getJamProyek();
-  var tgl=getTanggalProyek();
-  setVal('f-masuk',jam);
-  setVal('f-tanggal',tgl);
+  if(tgl === todayStr()) tgl = getTanggalProyek(); // Pastikan tanggal ikut timezone proyek
+  setVal('f-masuk',jam); setVal('f-tanggal',tgl);
 
-  var el=document.getElementById('cin-display');
-  el.textContent=jam;
-  el.className='cio-time';
-  document.getElementById('card-cin').className='cio-card done-in';
-  document.getElementById('btn-cin').disabled=true;
-  document.getElementById('btn-cout').disabled=false;
+  // Cek lokal
+  var a=RIWAYAT.find(function(x){return String(x.pekerjaId)===pekerjaId && x.tanggal===tgl && String(x.proyekId)===proyekId;});
+  if(a && a.masuk) return showAlert('alert-main','Sudah Check In hari ini','err');
 
-  var now=new Date();
-  document.getElementById('cin-tz').textContent='✅ '+getTzLabel()+' — '+now.toLocaleDateString('id-ID',{timeZone:proyek_tz||undefined,day:'numeric',month:'short'});
-  hitungDurasi();
-  renderWeek();
+  var btn=document.getElementById('btn-cin');
+  btn.disabled=true; btn.textContent='Merekam...';
+
+  var pk=MASTER.pekerja.find(function(p){return String(p.id)===pekerjaId;})||{};
+
+  var row={
+    id:uid(), proyekId:proyekId, mandorId:mandorId, pekerjaId:pekerjaId,
+    tanggal:tgl, masuk:jam, pulang:'',
+    hariKerja:0, lemburJam:0,
+    upahHarian:Number(pk.upah)||0, upahLembur:Number(pk.lembur)||0, total:0,
+    deskripsi:'', laporanItems:'[]', foto:'[]',
+    status:'pending', catatanReject:'', approvedBy:'', approvedAt:'',
+    createdAt:new Date().toISOString()
+  };
+
+  apiPost({action:'post_absensi',row:row},function(res){
+    btn.textContent='Check In';
+    if(res.ok && res.result!=='duplicate'){
+      RIWAYAT.push(normAbsensi([row])[0]);
+      checkAbsensiState();
+      showAlert('alert-main','✅ Check In berhasil direkam ke server!','ok');
+      renderWeek();
+    } else if(res.result==='duplicate'){
+      showAlert('alert-main','Sudah Check In di server!','err');
+    } else {
+      btn.disabled=false;
+      showAlert('alert-main','Gagal: '+(res.error||'Error'),'err');
+    }
+  });
 }
 
 function doCheckOut(){
-  var masuk=getVal('f-masuk');
-  if(!masuk) return showAlert('alert-main','Lakukan Check In dulu','err');
+  var proyekId=getVal('f-proyek');
+  var pekerjaId=getVal('f-pekerja');
+  var tgl=getVal('f-tanggal');
+
+  var a=RIWAYAT.find(function(x){return String(x.pekerjaId)===pekerjaId && x.tanggal===tgl && String(x.proyekId)===proyekId;});
+  if(!a) return showAlert('alert-main','Belum Check In','err');
 
   var jam=getJamProyek();
   setVal('f-pulang',jam);
 
-  var el=document.getElementById('cout-display');
-  el.textContent=jam;
-  el.className='cio-time';
-  document.getElementById('card-cout').className='cio-card done-out';
-  document.getElementById('btn-cout').textContent='🔄 Update';
+  var pk=MASTER.pekerja.find(function(p){return String(p.id)===pekerjaId;})||{};
+  var hasil=hitungHari(a.masuk, jam, Number(pk.upah)||0, Number(pk.lembur)||0);
 
-  var now=new Date();
-  document.getElementById('cout-tz').textContent='✅ '+getTzLabel()+' — '+now.toLocaleDateString('id-ID',{timeZone:proyek_tz||undefined,day:'numeric',month:'short'});
-  hitungDurasi();
+  a.pulang = jam;
+  a.hariKerja = hasil.hk;
+  a.lemburJam = hasil.lj;
+  a.total = hasil.total;
+
+  var btn=document.getElementById('btn-cout');
+  btn.disabled=true; btn.textContent='Merekam...';
+
+  apiPost({action:'update_absensi',row:a},function(res){
+    btn.textContent='Check Out';
+    if(res.ok){
+      checkAbsensiState();
+      showAlert('alert-main','✅ Check Out berhasil disimpan! Jangan lupa lampirkan foto di tab Laporan.','ok');
+      renderWeek();
+    }else{
+      btn.disabled=false;
+      showAlert('alert-main','Gagal Check Out: '+res.error,'err');
+    }
+  });
 }
 
 function toggleManualJam(){
   var wrap=document.getElementById('manual-jam-wrap');
   wrap.style.display = (wrap.style.display==='none'||!wrap.style.display) ? 'block' : 'none';
-  if(wrap.style.display==='block'){
-    var masuk=getVal('f-masuk')||'08:00';
-    var pulang=getVal('f-pulang')||'17:00';
-    setVal('f-masuk',masuk);
-    setVal('f-pulang',pulang);
-  }
+}
+
+function simpanJamManual(){
+  var proyekId=getVal('f-proyek');
+  var pekerjaId=getVal('f-pekerja');
+  var tgl=getVal('f-tanggal');
+  var masuk=getVal('f-masuk');
+  var pulang=getVal('f-pulang');
+
+  var a=RIWAYAT.find(function(x){return String(x.pekerjaId)===pekerjaId && x.tanggal===tgl && String(x.proyekId)===proyekId;});
+  if(!a) return showAlert('alert-main','Pekerja belum Check In hari ini. Lakukan Check In dulu baru edit jam.','err');
+  if(!masuk||!pulang) return showAlert('alert-main','Isi jam masuk dan pulang!','err');
+
+  var pk=MASTER.pekerja.find(function(p){return String(p.id)===pekerjaId;})||{};
+  var hasil=hitungHari(masuk, pulang, Number(pk.upah)||0, Number(pk.lembur)||0);
+
+  a.masuk = masuk;
+  a.pulang = pulang;
+  a.hariKerja = hasil.hk;
+  a.lemburJam = hasil.lj;
+  a.total = hasil.total;
+
+  var btn=document.getElementById('btn-simpan-manual');
+  btn.disabled=true; btn.textContent='Menyimpan...';
+
+  apiPost({action:'update_absensi',row:a},function(res){
+    btn.disabled=false; btn.textContent='💾 Update Jam Manual';
+    if(res.ok){
+      checkAbsensiState();
+      showAlert('alert-main','✅ Jam manual berhasil diupdate!','ok');
+      renderWeek();
+      toggleManualJam();
+    }else{
+      showAlert('alert-main','Gagal update: '+res.error,'err');
+    }
+  });
 }
 
 // ── WEEK PREVIEW ──
@@ -751,7 +808,6 @@ function renderWeek(){
   box.className='wk-box show';
 }
 
-// ── HITUNG DURASI ──
 function hitungDurasi(){
   var masuk=getVal('f-masuk');
   var pulang=getVal('f-pulang');
@@ -763,58 +819,6 @@ function hitungDurasi(){
   var lj=Math.max(0,(d-480)/60);
   el.className='kalk show';
   el.innerHTML='⏱ <strong>'+Math.floor(d/60)+'j '+(d%60)+'m</strong> &nbsp;·&nbsp; Hari: <strong>'+hk+'</strong>'+(lj>0?' &nbsp;·&nbsp; Lembur: <strong>'+lj.toFixed(1)+'j</strong>':'');
-}
-
-// ── SIMPAN ABSENSI ──
-function simpan(){
-  var proyekId=getVal('f-proyek');
-  var mandorId=getVal('f-mandor');
-  var pekerjaId=getVal('f-pekerja');
-  var tanggal=getVal('f-tanggal');
-  var masuk=getVal('f-masuk');
-  var pulang=getVal('f-pulang');
-
-  if(!proyekId)  return showAlert('alert-main','Pilih Proyek terlebih dahulu','err');
-  if(!mandorId)  return showAlert('alert-main','Pilih Mandor','err');
-  if(!pekerjaId) return showAlert('alert-main','Pilih Nama Pekerja','err');
-  if(!tanggal)   return showAlert('alert-main','Pilih Tanggal','err');
-  if(!masuk)     return showAlert('alert-main','Lakukan Check In terlebih dahulu','err');
-  if(!pulang)    return showAlert('alert-main','Lakukan Check Out terlebih dahulu','err');
-
-  var dup=RIWAYAT.find(function(a){return String(a.pekerjaId)===pekerjaId&&a.tanggal===tanggal&&String(a.proyekId)===proyekId;});
-  if(dup) return showAlert('alert-main','Absensi untuk pekerja, proyek, dan tanggal ini sudah ada!','err');
-
-  var btn=document.getElementById('btn-simpan');
-  btn.disabled=true;btn.textContent='Menyimpan...';
-
-  var pk=MASTER.pekerja.find(function(p){return p.id===pekerjaId;})||{};
-  var hasil=hitungHari(masuk,pulang,Number(pk.upah)||0,Number(pk.lembur)||0);
-
-  var row={
-    id:uid(),proyekId:proyekId,mandorId:mandorId,pekerjaId:pekerjaId,
-    tanggal:tanggal,masuk:masuk,pulang:pulang,
-    hariKerja:hasil.hk,lemburJam:hasil.lj,
-    upahHarian:Number(pk.upah)||0,upahLembur:Number(pk.lembur)||0,total:hasil.total,
-    deskripsi:'',laporanItems:'[]',
-    status:'pending',catatanReject:'',approvedBy:'',approvedAt:'',
-    createdAt:new Date().toISOString()
-  };
-
-  apiPost({action:'post_absensi',row:row},function(res){
-    btn.disabled=false;btn.textContent='💾 Simpan Absensi';
-    if(res.ok&&res.result!=='duplicate'){
-      RIWAYAT.push(normAbsensi([row])[0]);
-      showAlert('alert-main','✅ Absensi berhasil disimpan! Tambahkan laporan di tab 📸 Foto dan Laporan.','ok');
-      renderWeek();
-      // Reset check in/out setelah simpan
-      resetCheckInOut();
-      window.scrollTo({top:0,behavior:'smooth'});
-    } else if(res.result==='duplicate'){
-      showAlert('alert-main','Absensi ini sudah ada di server!','err');
-    } else {
-      showAlert('alert-main','Gagal: '+(res.error||'Error'),'err');
-    }
-  });
 }
 
 // ── TAB FOTO & LAPORAN ──
@@ -838,11 +842,8 @@ function initFotoTab(){
         return'<option value="'+a.id+'">'+(pk.nama||'?')+' — '+(pr.nama||'?')+' ('+a.masuk+'–'+a.pulang+')</option>';
       }).join('');
     // Auto-select jika hanya 1
-    if(todayAbs.length===1) sel.value=todayAbs[0].id;
+    if(todayAbs.length===1) { sel.value=todayAbs[0].id; onFotoAbsensiChange(); }
   }
-  initLap();
-  mediaFiles=[];
-  renderMedia();
 }
 
 function onFotoAbsensiChange(){
@@ -850,16 +851,24 @@ function onFotoAbsensiChange(){
   if(!aid) return;
   var a=RIWAYAT.find(function(x){return x.id===aid;});
   if(!a) return;
-  // Isi laporan dari data existing jika ada
+  
   document.getElementById('lap-wrap').innerHTML='';
   lapCount=0;
-  var laps=[];
-  try{laps=JSON.parse(a.laporanItems||'[]');}catch(e){}
-  if(laps.length){laps.forEach(function(l){tambahLap(l.jamMulai,l.jamSelesai,l.uraian);});}
-  else tambahLap(a.masuk,'','');
+  var laps=[]; try{laps=JSON.parse(a.laporanItems||'[]');}catch(e){}
+  if(laps.length){ laps.forEach(function(l){tambahLap(l.jamMulai,l.jamSelesai,l.uraian);}); }
+  else { tambahLap(a.masuk, a.pulang, ''); }
+
+  // Load photos if already exist
+  mediaFiles = [];
+  try {
+    var fotos = JSON.parse(a.foto || '[]');
+    fotos.forEach(function(fUrl){
+      mediaFiles.push({id:uid(), type:'image', dataUrl:fUrl});
+    });
+  } catch(e){}
+  renderMedia();
 }
 
-// ── LAPORAN ──
 function initLap(){lapCount=0;document.getElementById('lap-wrap').innerHTML='';tambahLap();}
 
 function tambahLap(mulai,selesai,uraian){
@@ -902,7 +911,58 @@ function getLapItems(){
   return items;
 }
 
-// ── SIMPAN LAPORAN & FOTO (tab foto) ──
+// ── COMPRESS & UPLOAD FOTO ──
+function resizeAndCompressImage(file, callback) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var max_w = 300; var max_h = 300; // Ukuran diperkecil agar pas masuk database string
+      var w = img.width; var h = img.height;
+      if(w > h) { if(w > max_w) { h *= max_w / w; w = max_w; } }
+      else { if(h > max_h) { w *= max_h / h; h = max_h; } }
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.5); // Kompresi kuat 50%
+      callback(dataUrl);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleFiles(files){
+  if(mediaFiles.length + files.length > 3){
+    alert('Maksimal lampirkan 3 foto agar data bisa dikirim dengan lancar.');
+    return;
+  }
+  Array.from(files).forEach(function(f){
+    if(f.type.indexOf('video') >= 0){ alert('Gunakan foto, video terlalu besar.'); return; }
+    document.getElementById('upload-tap').querySelector('.txt').textContent = 'Memproses foto...';
+    resizeAndCompressImage(f, function(dataUrl){
+      mediaFiles.push({id:uid(), type:'image', dataUrl:dataUrl});
+      renderMedia();
+      document.getElementById('upload-tap').querySelector('.txt').textContent = 'Tap untuk ambil foto / pilih file';
+    });
+  });
+}
+
+function renderMedia(){
+  document.getElementById('media-grid').innerHTML=mediaFiles.map(function(f){
+    return'<div class="media-th"><img src="'+f.dataUrl+'" alt="">'
+      +'<button class="del-media" data-id="'+f.id+'">✕</button></div>';
+  }).join('');
+  document.querySelectorAll('.del-media').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var id=this.getAttribute('data-id');
+      mediaFiles=mediaFiles.filter(function(f){return f.id!==id;});
+      renderMedia();
+    });
+  });
+}
+
 function simpanLaporan(){
   var aid=getVal('foto-absensi-sel');
   if(!aid) return showAlert('alert-foto','Pilih absensi terlebih dahulu','err');
@@ -915,6 +975,9 @@ function simpanLaporan(){
   var deskrip=lapItems.map(function(l){return'['+l.jamMulai+'-'+l.jamSelesai+'] '+l.uraian;}).join(' | ');
   a.laporanItems=JSON.stringify(lapItems);
   a.deskripsi=deskrip;
+  
+  var fotoUrls = mediaFiles.map(function(f){ return f.dataUrl; });
+  a.foto = JSON.stringify(fotoUrls);
 
   var btn=document.getElementById('btn-simpan-laporan');
   btn.disabled=true;btn.textContent='Menyimpan...';
@@ -922,39 +985,10 @@ function simpanLaporan(){
   apiPost({action:'update_absensi',row:a},function(res){
     btn.disabled=false;btn.textContent='📤 Simpan Laporan & Foto';
     if(res.ok){
-      showAlert('alert-foto','✅ Laporan berhasil disimpan!','ok');
-      initLap();mediaFiles=[];renderMedia();
-      document.getElementById('f-files').value='';
+      showAlert('alert-foto','✅ Laporan dan Foto berhasil disimpan ke server!','ok');
     } else {
       showAlert('alert-foto','Gagal: '+(res.error||'Error'),'err');
     }
-  });
-}
-
-// ── UPLOAD FOTO ──
-function handleFiles(files){
-  Array.from(files).forEach(function(f){
-    if(f.size>52428800){alert('File "'+f.name+'" lebih dari 50MB');return;}
-    var r=new FileReader();
-    r.onload=function(e){
-      mediaFiles.push({id:uid(),name:f.name,type:f.type.startsWith('video')?'video':'image',dataUrl:e.target.result});
-      renderMedia();
-    };
-    r.readAsDataURL(f);
-  });
-}
-function renderMedia(){
-  document.getElementById('media-grid').innerHTML=mediaFiles.map(function(f){
-    return'<div class="media-th">'
-      +(f.type==='video'?'<video src="'+f.dataUrl+'" muted playsinline></video><div class="vbadge">VID</div>':'<img src="'+f.dataUrl+'" alt="">')
-      +'<button class="del-media" data-id="'+f.id+'">✕</button></div>';
-  }).join('');
-  document.querySelectorAll('.del-media').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var id=this.getAttribute('data-id');
-      mediaFiles=mediaFiles.filter(function(f){return f.id!==id;});
-      renderMedia();
-    });
   });
 }
 
@@ -969,12 +1003,7 @@ function switchTab(tab){
   });
   if(tab==='riwayat') muatRiwayat();
   if(tab==='foto'){
-    // Refresh riwayat dulu baru buka tab foto
-    if(!RIWAYAT.length) {
-      muatRiwayatSilent(initFotoTab);
-    } else {
-      initFotoTab();
-    }
+    if(!RIWAYAT.length) { muatRiwayatSilent(initFotoTab); } else { initFotoTab(); }
   }
 }
 
@@ -1014,22 +1043,30 @@ function renderRiwayat(){
     if(a.laporanItems){
       try{
         var li=JSON.parse(a.laporanItems);
-        if(li.length){
-          lapHtml='<div class="hist-lap">'+li.map(function(l){
-            return'<div class="hist-lap-row"><strong>'+l.jamMulai+'–'+l.jamSelesai+':</strong> '+l.uraian+'</div>';
-          }).join('')+'</div>';
-        }
+        if(li.length){ lapHtml='<div class="hist-lap">'+li.map(function(l){ return'<div class="hist-lap-row"><strong>'+l.jamMulai+'–'+l.jamSelesai+':</strong> '+l.uraian+'</div>'; }).join('')+'</div>'; }
       }catch(e){if(a.deskripsi)lapHtml='<div class="hist-lap"><div class="hist-lap-row">'+a.deskripsi+'</div></div>';}
     } else if(a.deskripsi){
       lapHtml='<div class="hist-lap"><div class="hist-lap-row">'+a.deskripsi+'</div></div>';
     }
+    
+    // Foto
+    var fotoHtml='';
+    try {
+      var fotos = JSON.parse(a.foto || '[]');
+      if(fotos.length){
+         fotoHtml = '<div style="display:flex;gap:4px;margin-top:6px;padding:0 10px;">' + fotos.map(function(f){
+           return '<img src="'+f+'" style="width:36px;height:36px;border-radius:4px;object-fit:cover">';
+         }).join('') + '</div>';
+      }
+    }catch(e){}
+
     return'<div class="hist-item">'
       +'<div class="hist-nama">'+(pk.nama||'?')+' <span style="font-size:11px;color:#999">· '+(pk.jabatan||'')+'</span></div>'
       +'<div class="hist-meta">'+(pr.nama||'?')+' · '+getHari(a.tanggal)+', '+fmtTgl(a.tanggal)+'<br>'
         +a.masuk+'–'+a.pulang+' · <strong>'+a.hariKerja+' hari</strong>'
         +(Number(a.lemburJam)>0?' · Lembur '+Number(a.lemburJam).toFixed(1)+'j':'')
         +' <span class="bdg bdg-'+a.status+'">'+a.status+'</span></div>'
-      +lapHtml+'</div>';
+      +lapHtml+fotoHtml+'</div>';
   }).join('');
 }
 
