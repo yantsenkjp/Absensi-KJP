@@ -1356,4 +1356,348 @@ function approveAll() {
   list.forEach(function(a){
     a.status='approved'; a.approvedBy=SM_LOGGED.nama; a.approvedAt=new Date().toISOString();
     apiPost({action:'update_absensi',row:a}, function(res){
-      done++; if (done
+      done++; if (done===list.length) { renderValidasiList(); showAlert('alert-validasi','success','✅ Semua approved!'); }
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// REKAP
+// ═══════════════════════════════════════════════════════
+function initRekap() {
+  var selPr = document.getElementById('rek-proyek');
+  selPr.innerHTML = '<option value="">Semua Proyek</option>' + DB.proyek.map(function(p){ return '<option value="'+p.id+'">'+p.nama+'</option>'; }).join('');
+  var wk = getMinggu(todayStr()); setFieldVal('rek-dari', wk.start); setFieldVal('rek-sampai', wk.end);
+}
+
+function getRekapData() {
+  var pid    = getFieldVal('rek-proyek'); var status = getFieldVal('rek-status');
+  var dari   = getFieldVal('rek-dari'); var sampai = getFieldVal('rek-sampai');
+  return DB.absensi.filter(function(a){
+    if (a.status==='rejected') return false;
+    if (pid    && String(a.proyekId)!==pid)    return false;
+    if (status && a.status!==status)           return false;
+    if (dari   && a.tanggal<dari)              return false;
+    if (sampai && a.tanggal>sampai)            return false;
+    return true;
+  });
+}
+function getBayarMode() { var r = document.querySelector('input[name="bayar-mode"]:checked'); return r ? r.value : 'mandor'; }
+
+function getWeeks(dari, sampai) {
+  var weeks=[]; var cur=new Date(dari.split('-')[0],dari.split('-')[1]-1,dari.split('-')[2]);
+  while(true){
+    var st=new Date(cur); st.setDate(cur.getDate()-cur.getDay()); var en=new Date(st);  en.setDate(st.getDate()+6);
+    function f(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+    var wStart=f(st), wEnd=f(en); if (wStart > sampai) break;
+    if (!weeks.find(function(w){return w.start===wStart;})) weeks.push({start:wStart,end:wEnd});
+    cur.setDate(cur.getDate()+7); if (weeks.length>26) break;
+  }
+  return weeks;
+}
+
+function tampilkanRekap() {
+  var el  = document.getElementById('rekap-result'); var tbl = document.getElementById('rekap-table');
+  el.style.display='block'; tbl.innerHTML='<div class="loading-full"><div class="spinner"></div>Memuat data dari Google Sheets...</div>';
+  var dari   = getFieldVal('rek-dari'); var sampai = getFieldVal('rek-sampai'); var pid    = getFieldVal('rek-proyek');
+  var params = {action:'get_absensi'}; if(dari) params.dari = dari; if(sampai) params.sampai = sampai; if(pid) params.proyekId = pid;
+  apiGet(params, function(res) { if(res.ok) DB.absensi = normAbsensi(res.data); renderRekapTable(); });
+}
+
+function renderRekapTable() {
+  var data   = getRekapData(); var el     = document.getElementById('rekap-result'); var tbl    = document.getElementById('rekap-table');
+  var dari   = getFieldVal('rek-dari'); var sampai = getFieldVal('rek-sampai'); el.style.display='block';
+  if (!data.length) { tbl.innerHTML='<div class="card empty-state">Tidak ada data absensi pada periode ini</div>'; return; }
+  var mode = getBayarMode(); var weeks = getWeeks(dari, sampai); var html=''; var grandTotal=0; var grandHari=0;
+
+  weeks.forEach(function(week){
+    var wData=data.filter(function(a){return a.tanggal>=week.start&&a.tanggal<=week.end;});
+    if(!wData.length) return;
+    var byMandor={}; wData.forEach(function(a){var k=a.mandorId||'_';if(!byMandor[k])byMandor[k]=[];byMandor[k].push(a);});
+    var wTotal=0;
+
+    html+='<div class="card" style="padding:0;overflow:hidden;margin-bottom:14px"><div style="background:#111;color:#fff;padding:8px 14px;font-size:12px;font-weight:700">📅 '+fmtTgl(week.start)+' – '+fmtTgl(week.end)+'</div>';
+
+    Object.keys(byMandor).forEach(function(mnId){
+      var mnRecs=byMandor[mnId]; var mn=DB.mandor.find(function(m){return String(m.id)===mnId;})||{nama:'(Tanpa Mandor)',rekening:'-',hp:'-'};
+      var byPk={}; mnRecs.forEach(function(a){var k=a.pekerjaId;if(!byPk[k])byPk[k]=[];byPk[k].push(a);});
+      var mTotal=0; var mHari=0; var no=1;
+
+      html+='<div style="background:#1a1a1a;color:#fff;padding:7px 14px;font-size:12px;font-weight:700;display:flex;justify-content:space-between"><span>🦺 Mandor: '+mn.nama+'</span><span style="font-size:11px;font-weight:400;color:#aaa">'+(mode==='mandor'?'Rek: '+(mn.rekening||'-'):'Bayar ke pekerja')+'</span></div>';
+      html+='<div class="table-wrap"><table><thead><tr><th>No</th><th>Pekerja</th><th>Jabatan</th>';
+      for(var i=0;i<7;i++){ var sp=week.start.split('-').map(Number); var dt=new Date(sp[0],sp[1]-1,sp[2]+i); html+='<th style="font-size:10px">'+HARI_PD[i]+'<br>'+dt.getDate()+'</th>'; }
+      html+='<th>Hari</th><th>Lembur</th><th>Upah</th><th>+Lbr</th><th>Total</th>';
+      if(mode==='pekerja') html+='<th>Rekening</th>'; html+='<th style="min-width:140px">Laporan</th></tr></thead><tbody>';
+
+      Object.keys(byPk).forEach(function(pkId){
+        var recs=byPk[pkId]; var pk=DB.pekerja.find(function(p){return String(p.id)===pkId;})||{nama:'?',jabatan:'?',upah:0,lembur:0,rekening:'-'};
+        var tH=recs.reduce(function(s,a){return s+(Number(a.hariKerja)||0);},0); var tL=recs.reduce(function(s,a){return s+(Number(a.lemburJam)||0);},0);
+        var tB=recs.reduce(function(s,a){return s+(Number(a.total)||0);},0); mTotal+=tB; mHari+=tH; var cols='';
+        for(var i=0;i<7;i++){
+          var sp=week.start.split('-').map(Number); var dt=new Date(sp[0],sp[1]-1,sp[2]+i); var tgl=dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
+          var a=recs.find(function(r){return r.tanggal===tgl;});
+          if(!a){cols+='<td style="color:#ddd;text-align:center">–</td>';continue;}
+          var lj=Number(a.lemburJam)||0;
+          if(lj>0){
+            cols+='<td style="padding:0;text-align:center" title="'+a.masuk+'-'+a.pulang+'"><div style="position:relative;width:36px;height:34px;margin:0 auto;font-size:10px;font-weight:700"><svg style="position:absolute;inset:0;width:100%;height:100%"><line x1="2" y1="2" x2="34" y2="32" stroke="#ccc" stroke-width="1"/></svg><span style="position:absolute;left:2px;top:1px;color:#166534">'+a.hariKerja+'</span><span style="position:absolute;right:2px;bottom:1px;color:#1d4ed8">'+lj.toFixed(1)+'</span></div></td>';
+          } else {
+            var clr=a.status==='approved'?'#166534':a.status==='rejected'?'#dc2626':'#92400e'; cols+='<td style="text-align:center;font-weight:700;color:'+clr+'" title="'+a.masuk+'-'+a.pulang+'">'+a.hariKerja+'</td>';
+          }
+        }
+        var lapHtml='';
+        try{ var lapArr=JSON.parse(a&&a.laporanItems?a.laporanItems:'[]'); lapHtml=recs.filter(function(r){return r.deskripsi;}).map(function(r){ var li=[];try{li=JSON.parse(r.laporanItems||'[]');}catch(e){} return (li.length?li.map(function(l){return'<div style="font-size:10px">'+l.jamMulai+'-'+l.jamSelesai+': '+l.uraian+'</div>';}).join(''):'<div style="font-size:10px">'+r.deskripsi+'</div>'); }).join(''); }catch(e){lapHtml='<span style="color:#ccc;font-size:10px">—</span>';}
+        if(!lapHtml) lapHtml='<span style="color:#ccc;font-size:10px">—</span>';
+
+        html+='<tr><td style="text-align:center">'+no+'</td><td><strong>'+pk.nama+'</strong></td><td class="text-sm text-gray">'+pk.jabatan+'</td>'+cols
+          +'<td style="text-align:center;font-weight:700">'+tH+'</td><td style="text-align:center">'+tL.toFixed(1)+'</td><td style="text-align:right">'+rupiah(tH*(Number(pk.upah)||0))+'</td><td style="text-align:right">'+rupiah(tL*(Number(pk.lembur)||0))+'</td><td style="text-align:right;font-weight:700;color:#C8102E">'+rupiah(tB)+'</td>'
+          +(mode==='pekerja'?'<td style="font-size:11px;color:#166534"><strong>'+(pk.rekening||'—')+'</strong></td>':'')+'<td>'+lapHtml+'</td></tr>'; no++;
+      });
+
+      var subStyle=mode==='mandor'?'background:#f5f0e0':'background:#f0fdf4'; var subColor=mode==='mandor'?'color:#92400e':'color:#166534';
+      html+='<tr style="'+subStyle+';border-top:2px solid '+(mode==='mandor'?'#F5A800':'#22c55e')+'"><td colspan="3" style="text-align:right;font-weight:700;font-size:12px;'+subColor+'">Sub-Total '+mn.nama+'</td><td colspan="7"></td><td style="text-align:center;font-weight:700;'+subColor+'">'+mHari+'</td><td colspan="2"></td><td></td><td></td><td style="text-align:right;font-weight:700;color:#C8102E">'+rupiah(mTotal)+'</td>'
+        +(mode==='pekerja'?'<td style="font-size:11px;'+subColor+'">Ke rekening pekerja</td>':'')+'<td style="font-size:11px;'+subColor+'">'+(mode==='mandor'?'Transfer ke:<br><strong>'+(mn.rekening||'-')+'</strong>':'')+'</td></tr></tbody></table></div>';
+      wTotal+=mTotal; grandTotal+=mTotal; grandHari+=mHari;
+    });
+
+    html+='<div style="background:#111;color:#fff;padding:8px 14px;font-size:12px;font-weight:700;display:flex;justify-content:space-between"><span>Total Minggu ini</span><span style="color:#F5A800">'+rupiah(wTotal)+'</span></div></div>';
+  });
+
+  html+='<div class="card" style="background:#111;color:#fff;border:none"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;font-weight:700">GRAND TOTAL</span><span style="font-size:14px;font-weight:700;color:#F5A800">'+rupiah(grandTotal)+'</span></div><div class="text-sm" style="color:#666;margin-top:4px">'+grandHari+' hari kerja · '+data.length+' record · Mode: '+(mode==='mandor'?'Via Mandor':'Langsung ke Pekerja')+'</div></div>';
+  tbl.innerHTML=html;
+}
+
+function printRekap() {
+  var data=getRekapData(); if(!data.length){alert('Tidak ada data. Klik Tampilkan dulu.');return;}
+  var pid=getFieldVal('rek-proyek'); var dari=getFieldVal('rek-dari'); var sampai=getFieldVal('rek-sampai'); var mode=getBayarMode();
+  var pr=pid?DB.proyek.find(function(p){return p.id===pid;}):null; var smObj=pr?DB.sm.find(function(s){return String(s.id)===String(pr.smId);}):null;
+  var weeks=getWeeks(dari,sampai); var body='';var grandTotal=0;var grandHari=0;
+
+  weeks.forEach(function(week){
+    var wData=data.filter(function(a){return a.tanggal>=week.start&&a.tanggal<=week.end;}); if(!wData.length)return;
+    var byMandor={}; wData.forEach(function(a){var k=a.mandorId||'_';if(!byMandor[k])byMandor[k]=[];byMandor[k].push(a);});
+    var wTotal=0; body+='<div class="wb"><div class="wt">Minggu: '+fmtTgl(week.start)+' — '+fmtTgl(week.end)+'</div>';
+
+    Object.keys(byMandor).forEach(function(mnId){
+      var mnRecs=byMandor[mnId]; var mn=DB.mandor.find(function(m){return String(m.id)===mnId;})||{nama:'(Tanpa Mandor)',rekening:'-'};
+      var byPk={}; mnRecs.forEach(function(a){var k=a.pekerjaId;if(!byPk[k])byPk[k]=[];byPk[k].push(a);});
+      var mTotal=0;var mHari=0;var no=1;var rows=''; var dateCols='';
+      for(var i=0;i<7;i++){ var sp=week.start.split('-').map(Number); var dt=new Date(sp[0],sp[1]-1,sp[2]+i); dateCols+='<th>'+HARI_PD[i]+'/'+dt.getDate()+'</th>'; }
+
+      Object.keys(byPk).forEach(function(pkId){
+        var recs=byPk[pkId]; var pk=DB.pekerja.find(function(p){return String(p.id)===pkId;})||{nama:'?',jabatan:'?',upah:0,lembur:0,rekening:'-'};
+        var tH=recs.reduce(function(s,a){return s+(Number(a.hariKerja)||0);},0); var tL=recs.reduce(function(s,a){return s+(Number(a.lemburJam)||0);},0);
+        var tB=recs.reduce(function(s,a){return s+(Number(a.total)||0);},0); mTotal+=tB;mHari+=tH; var cols='';
+        for(var i=0;i<7;i++){
+          var sp=week.start.split('-').map(Number); var dt=new Date(sp[0],sp[1]-1,sp[2]+i); var tgl=dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
+          var a=recs.find(function(r){return r.tanggal===tgl;});
+          if(!a){cols+='<td>-</td>';continue;}
+          var lj=Number(a.lemburJam)||0; var mark=a.status==='approved'?'✓':a.status==='rejected'?'✗':'?'; cols+='<td>'+mark+(lj>0?'/'+lj.toFixed(1):'')+'/'+a.hariKerja+'</td>';
+        }
+        var lapHtml='';
+        try{ var allLaps=[]; recs.forEach(function(r){try{JSON.parse(r.laporanItems||'[]').forEach(function(l){allLaps.push('<li>'+l.jamMulai+'-'+l.jamSelesai+': '+l.uraian+'</li>');});}catch(e){if(r.deskripsi)allLaps.push('<li>'+r.deskripsi+'</li>');}}); lapHtml=allLaps.length?'<ul style="padding-left:8px;font-size:8px">'+allLaps.join('')+'</ul>':'—'; }catch(e){lapHtml='—';}
+
+        rows+='<tr><td>'+no+'</td><td class="tl">'+pk.nama+'<br><small>'+pk.jabatan+'</small></td><td class="tr">'+rupiah(pk.upah)+'</td><td class="tr">'+rupiah(pk.lembur)+'</td>'+cols+'<td>'+tH+'</td><td>'+tL.toFixed(1)+'</td><td class="tr">'+rupiah(tH*(Number(pk.upah)||0))+'</td><td class="tr">'+rupiah(tL*(Number(pk.lembur)||0))+'</td><td class="tr"><strong>'+rupiah(tB)+'</strong></td>'
+          +(mode==='pekerja'?'<td class="tl" style="font-size:8px"><strong>'+(pk.rekening||'—')+'</strong></td>':'')+'<td class="tl">'+lapHtml+'</td></tr>'; no++;
+      });
+
+      var subRek=mode==='mandor'?'Transfer ke:<br><strong>'+mn.rekening+'</strong>':'Ke rekening pekerja';
+      body+='<div class="mhdr"><span>Mandor: '+mn.nama+'</span><span>'+(mode==='mandor'?'Rek: '+mn.rekening:'Bayar ke pekerja')+'</span></div><table class="ptbl"><thead><tr><th>No</th><th class="tl">Pekerja/Jabatan</th><th>Upah/Hr</th><th>Lbr/j</th>'+dateCols+'<th>H</th><th>L</th><th>Upah</th><th>Lembur</th><th>Total</th>'
+        +(mode==='pekerja'?'<th class="tl">Rekening</th>':'')+'<th class="tl">Laporan</th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr style="background:#f5f5f5"><td colspan="4" style="text-align:right;font-weight:700">Sub-Total '+mn.nama+'</td><td colspan="7"></td><td style="font-weight:700">'+mHari+'</td><td></td><td></td><td></td><td class="tr"><strong>'+rupiah(mTotal)+'</strong></td>'
+        +(mode==='pekerja'?'<td style="font-size:8px">Ke rek. pekerja</td>':'')+'<td style="font-size:8px">'+subRek+'</td></tr></tfoot></table>';
+      wTotal+=mTotal;grandTotal+=mTotal;grandHari+=mHari;
+    });
+    body+='<div style="background:#111;color:#fff;padding:3px 6px;font-size:10px;font-weight:700;display:flex;justify-content:space-between;margin-top:2px"><span>Total Minggu</span><span>'+rupiah(wTotal)+'</span></div></div>';
+  });
+
+  document.getElementById('print-area').innerHTML=
+    '<div class="ph"><div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:4px"><svg width="32" height="32" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="4" width="13" height="32" fill="#C8102E"/><rect x="25" y="4" width="13" height="32" fill="#C8102E"/><rect x="15" y="16" width="10" height="20" fill="#C8102E"/><rect x="18" y="2" width="12" height="13" fill="#F5A800"/></svg><div><div class="co">KALIABANG</div><div style="font-size:9px">PT. Kaliabang Jaya Pratama</div></div></div><h1>REKAP UPAH PEKERJA HARIAN</h1><p>'+(pr?pr.nama:'Semua Proyek')+' | '+fmtTgl(dari)+' s/d '+fmtTgl(sampai)+'</p></div>'
+    +'<div class="pm"><span><strong>Proyek</strong>: '+(pr?pr.nama:'Semua')+'</span><span><strong>Lokasi</strong>: '+(pr?pr.lokasi||'-':'-')+'</span><span><strong>Site Manager</strong>: '+(smObj?smObj.nama:'-')+'</span><span><strong>Periode</strong>: '+fmtTgl(dari)+' – '+fmtTgl(sampai)+'</span><span><strong>Mode Bayar</strong>: '+(mode==='mandor'?'Via Mandor':'Langsung ke Pekerja')+'</span><span><strong>Dicetak</strong>: '+fmtTgl(todayStr())+'</span></div>'
+    +body+'<div class="gtbox">GRAND TOTAL: '+rupiah(grandTotal)+' ('+grandHari+' hari kerja)</div><p class="pnote">✓=Approved ?=Pending ✗=Rejected | 8j=1 hari, 4-7j=0.5 hari. '+(mode==='mandor'?'Transfer ke rekening Mandor.':'Transfer ke rekening masing-masing Pekerja.')+'</p>'
+    +'<div class="pttd"><div class="pttd-box"><div>Menyetujui,<br>Site Manager</div><div class="pline">'+(smObj?smObj.nama:'_______________')+'</div></div><div class="pttd-box"><div>Dibuat oleh,<br>Admin</div><div class="pline">_______________</div></div></div>';
+  window.print();
+}
+
+// ═══════════════════════════════════════════════════════
+// MASTER DATA — PEKERJA
+// ═══════════════════════════════════════════════════════
+var pkEditId='';
+function renderPekerja() {
+  var el=document.getElementById('list-pekerja'); if(!DB.pekerja.length){el.innerHTML='<div class="empty-state">Belum ada data pekerja</div>';return;}
+  el.innerHTML='<div class="table-wrap"><table><thead><tr><th>Nama</th><th>Jabatan</th><th>Upah/Hari</th><th>Lembur/Jam</th><th>HP</th><th>Rekening</th><th></th></tr></thead><tbody>'
+    +DB.pekerja.map(function(p){
+      return '<tr><td><strong>'+p.nama+'</strong></td><td class="text-sm">'+p.jabatan+'</td><td class="text-sm">'+rupiah(p.upah)+'</td><td class="text-sm">'+rupiah(p.lembur)+'</td><td class="text-sm">'+p.hp+'</td><td class="text-sm">'+p.rekening+'</td><td><div class="flex gap-8"><button class="btn btn-sm btn-outline" onclick="editPekerja(\''+p.id+'\')">✏️</button><button class="btn btn-sm btn-danger" onclick="hapusPekerja(\''+p.id+'\')">🗑</button></div></td></tr>';
+    }).join('')+'</tbody></table></div>';
+}
+function simpanPekerja() {
+  var nama=getFieldVal('pk-nama'); if(!nama){showAlert('alert-pekerja','error','Nama wajib diisi');return;}
+  var upah=Number(getFieldVal('pk-upah'))||0; var lembur=Number(getFieldVal('pk-lembur'))||Math.round(upah/8);
+  var row={id:pkEditId||uid(), nama:nama, jabatan:getFieldVal('pk-jabatan'), upah:upah, lembur:lembur, hp:getFieldVal('pk-hp'), rekening:getFieldVal('pk-rek')};
+  var btn=document.getElementById('btn-pk-simpan'); btn.disabled=true;
+  apiPost({action:'upsert_pekerja',row:row},function(res){
+    btn.disabled=false;
+    if(res.ok){
+      if(pkEditId){var i=DB.pekerja.findIndex(function(p){return p.id===pkEditId;});if(i>=0)DB.pekerja[i]=row;} else DB.pekerja.push(row);
+      showAlert('alert-pekerja','success','✅ Pekerja berhasil disimpan!'); resetPekerja(); renderPekerja();
+    } else showAlert('alert-pekerja','error','Gagal: '+res.error);
+  });
+}
+function editPekerja(id) {
+  var p=DB.pekerja.find(function(x){return x.id===id;}); if(!p)return; pkEditId=id;
+  setFieldVal('pk-nama',p.nama);setFieldVal('pk-jabatan',p.jabatan); setFieldVal('pk-upah',p.upah);setFieldVal('pk-lembur',p.lembur); setFieldVal('pk-hp',p.hp);setFieldVal('pk-rek',p.rekening);
+  document.getElementById('btn-pk-simpan').textContent='💾 Update'; window.scrollTo({top:0,behavior:'smooth'});
+}
+function hapusPekerja(id) {
+  if(!confirm('Hapus pekerja ini?'))return;
+  apiPost({action:'delete_pekerja',id:id},function(res){ if(res.ok){DB.pekerja=DB.pekerja.filter(function(p){return p.id!==id;});renderPekerja();} else alert('Gagal: '+res.error); });
+}
+function resetPekerja() { pkEditId=''; ['pk-nama','pk-jabatan','pk-upah','pk-lembur','pk-hp','pk-rek'].forEach(function(id){setFieldVal(id,'');}); setFieldVal('pk-jabatan','Tukang'); document.getElementById('btn-pk-simpan').textContent='💾 Simpan'; }
+
+// ═══════════════════════════════════════════════════════
+// MASTER DATA — MANDOR
+// ═══════════════════════════════════════════════════════
+var mnEditId='';
+function renderMandor() {
+  var el=document.getElementById('list-mandor'); if(!DB.mandor.length){el.innerHTML='<div class="empty-state">Belum ada data mandor</div>';return;}
+  el.innerHTML='<div class="table-wrap"><table><thead><tr><th>Nama</th><th>Spesialisasi</th><th>HP</th><th>Rekening</th><th></th></tr></thead><tbody>'
+    +DB.mandor.map(function(m){
+      return '<tr><td><strong>'+m.nama+'</strong></td><td class="text-sm">'+m.spesialis+'</td><td class="text-sm">'+m.hp+'</td><td class="text-sm">'+m.rekening+'</td><td><div class="flex gap-8"><button class="btn btn-sm btn-outline" onclick="editMandor(\''+m.id+'\')">✏️</button><button class="btn btn-sm btn-danger" onclick="hapusMandor(\''+m.id+'\')">🗑</button></div></td></tr>';
+    }).join('')+'</tbody></table></div>';
+}
+function simpanMandor() {
+  var nama=getFieldVal('mn-nama'); if(!nama){showAlert('alert-mandor','error','Nama wajib diisi');return;}
+  var row={id:mnEditId||uid(),nama:nama,spesialis:getFieldVal('mn-spesialis'),hp:getFieldVal('mn-hp'),rekening:getFieldVal('mn-rek')};
+  var btn=document.getElementById('btn-mn-simpan');btn.disabled=true;
+  apiPost({action:'upsert_mandor',row:row},function(res){
+    btn.disabled=false;
+    if(res.ok){
+      if(mnEditId){var i=DB.mandor.findIndex(function(m){return m.id===mnEditId;});if(i>=0)DB.mandor[i]=row;} else DB.mandor.push(row);
+      showAlert('alert-mandor','success','✅ Mandor berhasil disimpan!'); resetMandor();renderMandor();
+    } else showAlert('alert-mandor','error','Gagal: '+res.error);
+  });
+}
+function editMandor(id) {
+  var m=DB.mandor.find(function(x){return x.id===id;});if(!m)return; mnEditId=id;
+  setFieldVal('mn-nama',m.nama);setFieldVal('mn-spesialis',m.spesialis); setFieldVal('mn-hp',m.hp);setFieldVal('mn-rek',m.rekening);
+  document.getElementById('btn-mn-simpan').textContent='💾 Update'; window.scrollTo({top:0,behavior:'smooth'});
+}
+function hapusMandor(id) {
+  if(!confirm('Hapus mandor ini?'))return;
+  apiPost({action:'delete_mandor',id:id},function(res){ if(res.ok){DB.mandor=DB.mandor.filter(function(m){return m.id!==id;});renderMandor();} else alert('Gagal: '+res.error); });
+}
+function resetMandor() { mnEditId='';['mn-nama','mn-spesialis','mn-hp','mn-rek'].forEach(function(id){setFieldVal(id,'');}); document.getElementById('btn-mn-simpan').textContent='💾 Simpan'; }
+
+// ═══════════════════════════════════════════════════════
+// MASTER DATA — SITE MANAGER
+// ═══════════════════════════════════════════════════════
+var smEditId='';
+function renderSM() {
+  var selPr=document.getElementById('sm-proyek'); selPr.innerHTML=DB.proyek.map(function(p){return'<option value="'+p.id+'">'+p.nama+'</option>';}).join('');
+  var el=document.getElementById('list-sm'); if(!DB.sm.length){el.innerHTML='<div class="empty-state">Belum ada Site Manager</div>';return;}
+  el.innerHTML='<div class="table-wrap"><table><thead><tr><th>Nama</th><th>HP</th><th>Proyek</th><th></th></tr></thead><tbody>'
+    +DB.sm.map(function(s){
+      var pIds=String(s.proyekIds||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
+      var pNames=pIds.map(function(pid){var pr=DB.proyek.find(function(p){return String(p.id)===pid;});return pr?pr.nama:pid;}).join(', ');
+      return '<tr><td><strong>'+s.nama+'</strong></td><td class="text-sm">'+s.hp+'</td><td class="text-sm">'+pNames+'</td><td><div class="flex gap-8"><button class="btn btn-sm btn-outline" onclick="editSM(\''+s.id+'\')">✏️</button><button class="btn btn-sm btn-danger" onclick="hapusSM(\''+s.id+'\')">🗑</button></div></td></tr>';
+    }).join('')+'</tbody></table></div>';
+}
+function simpanSM() {
+  var nama=getFieldVal('sm-nama');var pin=getFieldVal('sm-pin');
+  if(!nama){showAlert('alert-sm','error','Nama wajib diisi');return;} if(!smEditId&&!pin){showAlert('alert-sm','error','PIN wajib diisi');return;}
+  var selOpts=document.getElementById('sm-proyek').selectedOptions; var pIds=Array.from(selOpts).map(function(o){return o.value;}).join(',');
+  var existing=smEditId?DB.sm.find(function(s){return s.id===smEditId;}):null;
+  var row={id:smEditId||uid(),nama:nama,hp:getFieldVal('sm-hp'), pin:pin||(existing?existing.pin:''),proyekIds:pIds};
+  var btn=document.getElementById('btn-sm-simpan');btn.disabled=true;
+  apiPost({action:'upsert_sm',row:row},function(res){
+    btn.disabled=false;
+    if(res.ok){
+      if(smEditId){var i=DB.sm.findIndex(function(s){return s.id===smEditId;});if(i>=0)DB.sm[i]=row;} else DB.sm.push(row);
+      showAlert('alert-sm','success','✅ Site Manager berhasil disimpan!'); resetSM();renderSM();
+    } else showAlert('alert-sm','error','Gagal: '+res.error);
+  });
+}
+function editSM(id) {
+  var s=DB.sm.find(function(x){return x.id===id;});if(!s)return; smEditId=id;
+  setFieldVal('sm-nama',s.nama);setFieldVal('sm-hp',s.hp);setFieldVal('sm-pin','');
+  var pIds=String(s.proyekIds||'').split(',').map(function(x){return x.trim();});
+  var opts=document.getElementById('sm-proyek').options; for(var i=0;i<opts.length;i++) opts[i].selected=pIds.indexOf(opts[i].value)>=0;
+  document.getElementById('btn-sm-simpan').textContent='💾 Update'; window.scrollTo({top:0,behavior:'smooth'});
+}
+function hapusSM(id) {
+  if(!confirm('Hapus Site Manager ini?'))return;
+  apiPost({action:'delete_sm',id:id},function(res){ if(res.ok){DB.sm=DB.sm.filter(function(s){return s.id!==id;});renderSM();} else alert('Gagal: '+res.error); });
+}
+function resetSM() { smEditId='';['sm-nama','sm-hp','sm-pin'].forEach(function(id){setFieldVal(id,'');}); document.getElementById('btn-sm-simpan').textContent='💾 Simpan'; }
+
+// ═══════════════════════════════════════════════════════
+// MASTER DATA — PROYEK
+// ═══════════════════════════════════════════════════════
+var prEditId='';
+function renderProyek() {
+  document.getElementById('pr-mandor').innerHTML='<option value="">— Pilih —</option>' + DB.mandor.map(function(m){return'<option value="'+m.id+'">'+m.nama+'</option>';}).join('');
+  document.getElementById('pr-sm').innerHTML='<option value="">— Pilih —</option>' + DB.sm.map(function(s){return'<option value="'+s.id+'">'+s.nama+'</option>';}).join('');
+
+  var el=document.getElementById('list-proyek'); if(!DB.proyek.length){el.innerHTML='<div class="empty-state">Belum ada data proyek</div>';return;}
+  var stBadge={aktif:'badge-aktif',selesai:'badge-selesai',pending:'badge-pending'};
+  el.innerHTML='<div class="table-wrap"><table><thead><tr><th>Nama/Lokasi</th><th>Mandor</th><th>Site Manager</th><th>Status</th><th></th></tr></thead><tbody>'
+    +DB.proyek.map(function(p){
+      var mn=DB.mandor.find(function(m){return String(m.id)===String(p.mandorId);})||{};
+      var sm=DB.sm.find(function(s){return String(s.id)===String(p.smId);})||{};
+      return '<tr><td><strong>'+p.nama+'</strong><br><span class="text-sm text-gray">'+p.lokasi+'</span></td><td class="text-sm">'+(mn.nama||'-')+'</td><td class="text-sm">'+(sm.nama||'-')+'</td><td><span class="badge '+(stBadge[p.status]||'')+'">'+p.status+'</span></td><td><div class="flex gap-8"><button class="btn btn-sm btn-outline" onclick="editProyek(\''+p.id+'\')">✏️</button><button class="btn btn-sm btn-danger" onclick="hapusProyek(\''+p.id+'\')">🗑</button></div></td></tr>';
+    }).join('')+'</tbody></table></div>';
+}
+function simpanProyek() {
+  var nama=getFieldVal('pr-nama'); if(!nama){showAlert('alert-proyek','error','Nama wajib diisi');return;}
+  var row={id:prEditId||uid(),nama:nama,lokasi:getFieldVal('pr-lokasi'), mandorId:getFieldVal('pr-mandor'),smId:getFieldVal('pr-sm'),status:getFieldVal('pr-status')};
+  var btn=document.getElementById('btn-pr-simpan');btn.disabled=true;
+  apiPost({action:'upsert_proyek',row:row},function(res){
+    btn.disabled=false;
+    if(res.ok){
+      if(prEditId){var i=DB.proyek.findIndex(function(p){return p.id===prEditId;});if(i>=0)DB.proyek[i]=row;} else DB.proyek.push(row);
+      showAlert('alert-proyek','success','✅ Proyek berhasil disimpan!'); resetProyek();renderProyek();
+    } else showAlert('alert-proyek','error','Gagal: '+res.error);
+  });
+}
+function editProyek(id) {
+  var p=DB.proyek.find(function(x){return x.id===id;});if(!p)return; prEditId=id;
+  setFieldVal('pr-nama',p.nama);setFieldVal('pr-lokasi',p.lokasi); setFieldVal('pr-mandor',p.mandorId);setFieldVal('pr-sm',p.smId);setFieldVal('pr-status',p.status);
+  document.getElementById('btn-pr-simpan').textContent='💾 Update'; window.scrollTo({top:0,behavior:'smooth'});
+}
+function hapusProyek(id) {
+  if(!confirm('Hapus proyek ini?'))return;
+  apiPost({action:'delete_proyek',id:id},function(res){ if(res.ok){DB.proyek=DB.proyek.filter(function(p){return p.id!==id;});renderProyek();} else alert('Gagal: '+res.error); });
+}
+function resetProyek() { prEditId='';['pr-nama','pr-lokasi','pr-mandor','pr-sm'].forEach(function(id){setFieldVal(id,'');}); setFieldVal('pr-status','aktif'); document.getElementById('btn-pr-simpan').textContent='💾 Simpan'; }
+
+// ═══════════════════════════════════════════════════════
+// CLOCK & INIT
+// ═══════════════════════════════════════════════════════
+function updateClock() {
+  var n=new Date(); document.getElementById('topbar-date').textContent= HARI[n.getDay()]+', '+n.getDate()+' '+BLN[n.getMonth()]+' '+n.getFullYear();
+}
+setInterval(updateClock,60000); updateClock();
+document.getElementById('script-display').textContent = SCRIPT_CODE;
+
+try { GS_URL = localStorage.getItem(LS_URL)||''; } catch(e){}
+
+if (GS_URL) {
+  document.getElementById('gs-url-input').value = GS_URL;
+  goto('settings'); tampilSavedUrl(); setBadge('load'); document.getElementById('conn-badge').textContent = '⏳ Menghubungkan...';
+
+  var alertEl = document.getElementById('alert-settings'); alertEl.className = 'alert alert-info show';
+  alertEl.innerHTML = '⏳ Menghubungkan ke Google Sheets...<br><small style="color:#555">Jika gagal, akan muncul pesan error dalam 10 detik.</small><br><button onclick="hapusSimpanUrl()" class="btn btn-ghost btn-sm" style="margin-top:8px">🗑 Ganti URL</button>';
+
+  window.setTimeout(function() {
+    loadAll(function(ok, errMsg){
+      if (ok) { goto('dashboard'); } else {
+        setBadge('err'); var msg = errMsg || 'Gagal terhubung'; var alertEl2 = document.getElementById('alert-settings');
+        alertEl2.className = 'alert alert-error show';
+        alertEl2.innerHTML = '<strong>❌ Gagal terhubung</strong><br><small>' + msg + '</small><br><br>Kemungkinan penyebab: Apps Script belum di-redeploy atau URL salah.<br><br><button onclick="testKoneksi()" class="btn btn-primary btn-sm" style="margin-right:8px">🔗 Coba Hubungkan Ulang</button><button onclick="hapusSimpanUrl()" class="btn btn-danger btn-sm">🗑 Hapus URL & Input Ulang</button>';
+      }
+    });
+  }, 300);
+} else {
+  goto('settings'); setBadge('err'); document.getElementById('conn-badge').textContent = '⚙ Belum dikonfigurasi';
+}
+</script>
+</body>
+</html>
