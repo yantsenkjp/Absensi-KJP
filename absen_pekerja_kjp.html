@@ -151,8 +151,6 @@ select{
 .empty{text-align:center;padding:32px 16px;color:#888;font-size:14px}
 .empty .ico{font-size:36px;margin-bottom:8px}
 .hidden{display:none!important}
-/* tombol check in setelah terisi — lebih besar */
-.btn-cin-big{font-size:16px;padding:16px;width:100%}
 
 /* ── BANNER BELUM ABSEN ── */
 .banner-info{background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;padding:14px;margin-bottom:14px;font-size:13px;color:#92400e;line-height:1.5}
@@ -160,7 +158,6 @@ select{
 </head>
 <body>
 
-<!-- HEADER -->
 <div class="hdr">
   <div class="hdr-logo">
     <svg width="26" height="26" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
@@ -179,7 +176,6 @@ select{
 
 <div class="sbar info" id="sbar">Menghubungkan ke server...</div>
 
-<!-- SETUP -->
 <div id="setup-panel" class="hidden">
   <div class="setup">
     <h2>⚙️ Konfigurasi Awal</h2>
@@ -194,26 +190,23 @@ select{
   </div>
 </div>
 
-<!-- ── TABS 3 TAB ── -->
 <div class="tabs hidden" id="main-tabs">
   <div class="tab active" onclick="switchTab('absen')">
     <span class="tab-ico">✏️</span>Input Absen
   </div>
   <div class="tab" onclick="switchTab('foto')">
-    <span class="tab-ico">📸</span>Foto &amp; Laporan
+    <span class="tab-ico">📸</span>Foto dan Laporan
   </div>
   <div class="tab" onclick="switchTab('riwayat')">
-    <span class="tab-ico">📅</span>Riwayat
+    <span class="tab-ico">📅</span>Riwayat input
   </div>
 </div>
 
-<!-- ══════════ TAB 1: INPUT ABSEN ══════════ -->
 <div id="tab-absen" class="hidden">
   <div class="card">
     <div style="font-size:15px;font-weight:700;margin-bottom:16px">✏️ Input Absensi Harian</div>
     <div class="alert" id="alert-main"></div>
 
-    <!-- Pilih data -->
     <div class="fg"><label>Proyek</label>
       <select id="f-proyek"><option value="">— Pilih Proyek —</option></select></div>
     <div class="fg"><label>Mandor</label>
@@ -221,36 +214,30 @@ select{
     <div class="fg"><label>Nama Pekerja</label>
       <select id="f-pekerja"><option value="">— Pilih Nama —</option></select></div>
 
-    <!-- Info pekerja -->
     <div class="pk-info" id="pk-info">
       <div class="pk-nama" id="pk-nama-txt"></div>
       <div class="pk-jabatan" id="pk-jabatan-txt"></div>
       <div class="pk-proyek" id="pk-proyek-txt"></div>
     </div>
 
-    <!-- Week preview -->
     <div class="wk-box" id="wk-box">
       <div class="wk-ttl" id="wk-ttl"></div>
       <div id="wk-rows"></div>
       <div class="wk-total" id="wk-total"></div>
     </div>
 
-    <!-- Tanggal -->
     <div class="fg"><label>Tanggal</label>
       <input type="date" id="f-tanggal"></div>
 
-    <!-- CHECK IN / CHECK OUT -->
     <div style="margin-bottom:10px">
       <div style="font-size:12px;font-weight:700;color:#555;margin-bottom:8px">Jam Kerja</div>
       <div class="checkinout-wrap">
-        <!-- CHECK IN -->
         <div class="cio-card" id="card-cin">
           <div class="cio-label">🟢 Check In</div>
           <div class="cio-time empty" id="cin-display">Belum</div>
           <button class="btn-cio btn-cin" id="btn-cin" onclick="doCheckIn()">Check In</button>
           <div class="cio-tz" id="cin-tz"></div>
         </div>
-        <!-- CHECK OUT -->
         <div class="cio-card" id="card-cout">
           <div class="cio-label">🔴 Check Out</div>
           <div class="cio-time empty" id="cout-display">Belum</div>
@@ -258,7 +245,6 @@ select{
           <div class="cio-tz" id="cout-tz"></div>
         </div>
       </div>
-      <!-- Edit manual (jika perlu koreksi) -->
       <div style="margin-top:8px">
         <button onclick="toggleManualJam()" class="btn-add" style="width:100%;justify-content:center;font-size:12px">
           ✏️ Edit Jam Manual
@@ -278,22 +264,36 @@ select{
       </div>
     </div>
 
-    <!-- Kalkulasi -->
     <div class="kalk" id="kalk"></div>
 
-    <!-- LAPORAN & FOTO — muncul langsung setelah Check In -->
-    <div id="laporan-foto-inline" style="display:none;border-top:1.5px solid #f0f0f0;margin-top:4px;padding-top:16px">
-      <div style="font-size:14px;font-weight:700;color:#111;margin-bottom:14px">📋 Laporan Pekerjaan</div>
-      <div class="alert" id="alert-laporan"></div>
+    <button class="btn-simpan" id="btn-simpan">💾 Simpan Absensi</button>
+  </div>
+</div>
 
+<div id="tab-foto" class="hidden">
+  <div class="card">
+    <div style="font-size:15px;font-weight:700;margin-bottom:6px">📸 Foto dan Laporan Pekerjaan</div>
+    <div style="font-size:12px;color:#888;margin-bottom:16px;line-height:1.5">Isi laporan dan foto <strong>setelah</strong> input absen hari ini tersimpan.</div>
+
+    <div class="alert" id="alert-foto"></div>
+
+    <div class="fg">
+      <label>Pilih Absensi</label>
+      <select id="foto-absensi-sel"><option value="">— Pilih absensi —</option></select>
+    </div>
+
+    <div class="banner-info hidden" id="banner-no-absen">
+      ⚠️ Belum ada absensi hari ini. Silakan input absen di tab <strong>Input Absen</strong> terlebih dahulu.
+    </div>
+
+    <div id="foto-form-wrap">
       <div class="lap-hdr">
-        <label>Uraian Pekerjaan Hari Ini</label>
+        <label>Laporan Pekerjaan</label>
         <button class="btn-add" id="btn-add-lap">+ Tambah</button>
       </div>
       <div id="lap-wrap"></div>
 
-      <!-- Upload Foto -->
-      <div class="fg" style="margin-top:4px">
+      <div class="fg" style="margin-top:8px">
         <label>Foto / Video <span class="opt">opsional</span></label>
         <div class="upload-tap" id="upload-tap">
           <div class="ico">📷</div>
@@ -304,51 +304,14 @@ select{
         <div class="media-grid" id="media-grid"></div>
       </div>
 
-      <button class="btn-simpan" id="btn-simpan" style="background:#1d4ed8">💾 Simpan Laporan</button>
-    </div>
-
-    <!-- Info sebelum check in -->
-    <div id="info-sebelum-cin" style="background:#f8faff;border:1.5px solid #dbeafe;border-radius:10px;padding:14px;margin-top:8px;font-size:13px;color:#1d4ed8;text-align:center;line-height:1.6">
-      👆 Pilih proyek, mandor, pekerja — lalu tekan <strong>Check In</strong> untuk mulai merekam absensi
+      <button class="btn-simpan btn-blue" id="btn-simpan-laporan">📤 Simpan Laporan &amp; Foto</button>
     </div>
   </div>
 </div>
 
-<!-- ══════════ TAB 2: FOTO & LAPORAN ══════════ -->
-<div id="tab-foto" class="hidden">
-  <div class="card">
-    <div style="font-size:15px;font-weight:700;margin-bottom:6px">📸 Foto Pekerjaan</div>
-    <div style="font-size:12px;color:#888;margin-bottom:16px;line-height:1.5">
-      Tambahkan foto tambahan untuk absensi hari ini.
-    </div>
-    <div class="alert" id="alert-foto"></div>
-    <div class="fg">
-      <label>Pilih Absensi</label>
-      <select id="foto-absensi-sel"><option value="">— Pilih absensi —</option></select>
-    </div>
-    <div class="banner-info hidden" id="banner-no-absen">
-      ⚠️ Belum ada absensi hari ini. Lakukan <strong>Check In</strong> di tab Input Absen terlebih dahulu.
-    </div>
-    <div id="foto-form-wrap">
-      <div class="fg" style="margin-top:8px">
-        <label>Tambah Foto / Video</label>
-        <div class="upload-tap" id="upload-tap-foto">
-          <div class="ico">📷</div>
-          <div class="txt">Tap untuk ambil foto / pilih file</div>
-          <div class="hint">JPG, PNG, MP4 — maks 50MB/file</div>
-        </div>
-        <input type="file" id="f-files-foto" multiple accept="image/*,video/*" style="display:none">
-        <div class="media-grid" id="media-grid-foto"></div>
-      </div>
-      <button class="btn-simpan btn-blue" id="btn-simpan-foto">📤 Simpan Foto</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════ TAB 3: RIWAYAT ══════════ -->
 <div id="tab-riwayat" class="hidden">
   <div class="card">
-    <div style="font-size:15px;font-weight:700;margin-bottom:14px">📅 Riwayat Absensi Minggu Ini</div>
+    <div style="font-size:15px;font-weight:700;margin-bottom:14px">📅 Riwayat Input Minggu Ini</div>
     <div class="fg"><label>Filter Pekerja</label>
       <select id="hist-pk"><option value="">Semua Pekerja</option></select></div>
     <button class="btn-simpan" onclick="muatRiwayat()" style="height:42px;font-size:14px;margin-bottom:14px;background:#1d4ed8">
@@ -409,7 +372,7 @@ function normTgl(v){
   if(!v) return '';
   if(typeof v==='string'){
     if(v.length>10&&v.indexOf('T')>0) return v.split('T')[0];
-    if(v.startsWith('1899-12-30')){var t=new Date(v);return pad(t.getHours())+':'+pad(t.getMinutes());}
+    if(v.startsWith('1899-12-30')){var t=new Date(v);return pad(t.getHours())+pad(t.getMinutes());}
     return v;
   }
   if(v instanceof Date){
@@ -521,15 +484,9 @@ function init(){
   document.getElementById('btn-setup').addEventListener('click',simpanSetup);
   document.getElementById('btn-add-lap').addEventListener('click',tambahLap);
   document.getElementById('btn-simpan').addEventListener('click',simpan);
+  document.getElementById('btn-simpan-laporan').addEventListener('click',simpanLaporan);
   document.getElementById('upload-tap').addEventListener('click',function(){document.getElementById('f-files').click();});
   document.getElementById('f-files').addEventListener('change',function(){handleFiles(this.files);});
-  // Tab foto — upload foto tambahan
-  var btnFoto=document.getElementById('btn-simpan-foto');
-  var tapFoto=document.getElementById('upload-tap-foto');
-  var filesFoto=document.getElementById('f-files-foto');
-  if(tapFoto) tapFoto.addEventListener('click',function(){filesFoto.click();});
-  if(filesFoto) filesFoto.addEventListener('change',function(){handleFilesFoto(this.files);});
-  if(btnFoto) btnFoto.addEventListener('click',simpanFoto);
   document.getElementById('f-proyek').addEventListener('change',onProyekChange);
   document.getElementById('f-pekerja').addEventListener('change',onPekerjaChange);
   document.getElementById('f-tanggal').addEventListener('change',function(){hitungDurasi();renderWeek();});
@@ -701,8 +658,8 @@ function updateTzLabel(){
 
 // ── CHECK IN / CHECK OUT ──
 function resetCheckInOut(){
-  window._absenId=null;
-  setVal('f-masuk',''); setVal('f-pulang','');
+  setVal('f-masuk','');
+  setVal('f-pulang','');
   var cinDisp=document.getElementById('cin-display');
   var coutDisp=document.getElementById('cout-display');
   if(cinDisp){cinDisp.textContent='Belum';cinDisp.className='cio-time empty';}
@@ -710,152 +667,51 @@ function resetCheckInOut(){
   document.getElementById('card-cin').className='cio-card';
   document.getElementById('card-cout').className='cio-card';
   document.getElementById('btn-cin').disabled=false;
-  document.getElementById('btn-cin').textContent='Check In';
   document.getElementById('btn-cout').disabled=true;
-  document.getElementById('btn-cout').textContent='Check Out';
   document.getElementById('kalk').className='kalk';
-  // Sembunyikan form laporan inline
-  var lapWrap=document.getElementById('laporan-foto-inline');
-  if(lapWrap) lapWrap.style.display='none';
-  var infoCin=document.getElementById('info-sebelum-cin');
-  if(infoCin) infoCin.style.display='block';
   updateTzLabel();
-  mediaFiles=[]; renderMedia();
 }
 
 function doCheckIn(){
-  var proyekId =getVal('f-proyek');
-  var mandorId =getVal('f-mandor');
+  var proyekId=getVal('f-proyek');
   var pekerjaId=getVal('f-pekerja');
-  if(!proyekId)  return showAlert('alert-main','Pilih Proyek terlebih dahulu','err');
-  if(!mandorId)  return showAlert('alert-main','Pilih Mandor','err');
-  if(!pekerjaId) return showAlert('alert-main','Pilih Nama Pekerja','err');
+  if(!proyekId) return showAlert('alert-main','Pilih Proyek terlebih dahulu','err');
+  if(!pekerjaId) return showAlert('alert-main','Pilih Nama Pekerja terlebih dahulu','err');
 
-  // Cek jika sudah ada record hari ini
   var jam=getJamProyek();
   var tgl=getTanggalProyek();
-  var dup=RIWAYAT.find(function(a){
-    return String(a.pekerjaId)===pekerjaId&&a.tanggal===tgl&&String(a.proyekId)===proyekId;
-  });
-  if(dup){
-    // Sudah ada — tampilkan langsung
-    window._absenId=dup.id;
-    setVal('f-masuk',dup.masuk||jam);
-    setVal('f-tanggal',tgl);
-    tampilStatusCheckIn(dup.masuk||jam,tgl,true);
-    showAlert('alert-main','Anda sudah check in hari ini ('+( dup.masuk||jam)+'). Tambahkan laporan di bawah.','ok');
-    if(dup.pulang){
-      setVal('f-pulang',dup.pulang);
-      tampilStatusCheckOut(dup.pulang,true);
-      hitungDurasi();
-    }
-    tampilFormLaporan(dup);
-    return;
-  }
-
-  var btn=document.getElementById('btn-cin');
-  btn.disabled=true; btn.textContent='⏳ Menyimpan...';
-
   setVal('f-masuk',jam);
   setVal('f-tanggal',tgl);
 
-  var pk=MASTER.pekerja.find(function(p){return p.id===pekerjaId;})||{};
-  var row={
-    id:uid(), proyekId:proyekId, mandorId:mandorId, pekerjaId:pekerjaId,
-    tanggal:tgl, masuk:jam, pulang:'',
-    hariKerja:0, lemburJam:0,
-    upahHarian:Number(pk.upah)||0, upahLembur:Number(pk.lembur)||0, total:0,
-    deskripsi:'', laporanItems:'[]',
-    status:'pending', catatanReject:'', approvedBy:'', approvedAt:'',
-    createdAt:new Date().toISOString()
-  };
-
-  apiPost({action:'post_absensi',row:row},function(res){
-    btn.disabled=false; btn.textContent='Check In';
-    if(res.ok&&res.result!=='duplicate'){
-      window._absenId=row.id;
-      RIWAYAT.push(normAbsensi([row])[0]);
-      tampilStatusCheckIn(jam,tgl,false);
-      showAlert('alert-main','✅ Check In berhasil pukul '+jam+' ('+getTzLabel()+'). Isi laporan pekerjaan di bawah.','ok');
-      tampilFormLaporan(row);
-      renderWeek();
-    } else if(res.result==='duplicate'){
-      showAlert('alert-main','Sudah ada absensi untuk hari ini!','err');
-      btn.disabled=false;
-    } else {
-      showAlert('alert-main','Gagal Check In: '+(res.error||'Error'),'err');
-      btn.disabled=false;
-    }
-  });
-}
-
-function tampilStatusCheckIn(jam,tgl,sudahAda){
   var el=document.getElementById('cin-display');
-  el.textContent=jam; el.className='cio-time';
+  el.textContent=jam;
+  el.className='cio-time';
   document.getElementById('card-cin').className='cio-card done-in';
   document.getElementById('btn-cin').disabled=true;
   document.getElementById('btn-cout').disabled=false;
+
   var now=new Date();
-  document.getElementById('cin-tz').textContent=(sudahAda?'📌 ':'✅ ')+getTzLabel()+' '+fmtTgl(tgl);
-}
-
-function tampilStatusCheckOut(jam,sudahAda){
-  var el=document.getElementById('cout-display');
-  el.textContent=jam; el.className='cio-time';
-  document.getElementById('card-cout').className='cio-card done-out';
-  document.getElementById('btn-cout').textContent='🔄 Update';
-  document.getElementById('cout-tz').textContent=(sudahAda?'📌 ':'✅ ')+getTzLabel();
-}
-
-function tampilFormLaporan(absenRecord){
-  var wrap=document.getElementById('laporan-foto-inline');
-  var info=document.getElementById('info-sebelum-cin');
-  if(!wrap) return;
-  wrap.style.display='block';
-  if(info) info.style.display='none';
-  // Isi laporan existing jika ada
-  document.getElementById('lap-wrap').innerHTML=''; lapCount=0;
-  var laps=[];
-  try{laps=JSON.parse(absenRecord.laporanItems||'[]');}catch(e){}
-  if(laps.length){laps.forEach(function(l){tambahLap(l.jamMulai,l.jamSelesai,l.uraian);});}
-  else tambahLap(absenRecord.masuk,'','');
+  document.getElementById('cin-tz').textContent='✅ '+getTzLabel()+' — '+now.toLocaleDateString('id-ID',{timeZone:proyek_tz||undefined,day:'numeric',month:'short'});
+  hitungDurasi();
+  renderWeek();
 }
 
 function doCheckOut(){
   var masuk=getVal('f-masuk');
   if(!masuk) return showAlert('alert-main','Lakukan Check In dulu','err');
-  if(!window._absenId) return showAlert('alert-main','Data absensi belum tersimpan. Lakukan Check In ulang.','err');
 
   var jam=getJamProyek();
   setVal('f-pulang',jam);
-  tampilStatusCheckOut(jam,false);
+
+  var el=document.getElementById('cout-display');
+  el.textContent=jam;
+  el.className='cio-time';
+  document.getElementById('card-cout').className='cio-card done-out';
+  document.getElementById('btn-cout').textContent='🔄 Update';
+
+  var now=new Date();
+  document.getElementById('cout-tz').textContent='✅ '+getTzLabel()+' — '+now.toLocaleDateString('id-ID',{timeZone:proyek_tz||undefined,day:'numeric',month:'short'});
   hitungDurasi();
-
-  // Hitung ulang durasi dan update ke Sheets
-  var masukVal=getVal('f-masuk');
-  var d=toMnt(jam)-toMnt(masukVal);
-  var hk=d>0?(d>=480?1:(d>=240?0.5:0)):0;
-  var lj=d>0?Math.max(0,(d-480)/60):0;
-
-  var absen=RIWAYAT.find(function(a){return a.id===window._absenId;});
-  if(!absen) return;
-  var pk=MASTER.pekerja.find(function(p){return String(p.id)===String(absen.pekerjaId);})||{};
-  absen.pulang=jam;
-  absen.hariKerja=hk;
-  absen.lemburJam=parseFloat(lj.toFixed(2));
-  absen.total=hk*(Number(pk.upah)||0)+lj*(Number(pk.lembur)||0);
-
-  var btn=document.getElementById('btn-cout');
-  btn.textContent='⏳ Menyimpan...'; btn.disabled=true;
-
-  apiPost({action:'update_absensi',row:absen},function(res){
-    btn.textContent='🔄 Update'; btn.disabled=false;
-    if(res.ok){
-      showAlert('alert-main','✅ Check Out berhasil pukul '+jam+' ('+getTzLabel()+'). Durasi: '+Math.floor(d/60)+'j '+(d%60)+'m.','ok');
-    } else {
-      showAlert('alert-main','Gagal menyimpan Check Out: '+(res.error||'Error'),'err');
-    }
-  });
 }
 
 function toggleManualJam(){
@@ -909,32 +765,49 @@ function hitungDurasi(){
   el.innerHTML='⏱ <strong>'+Math.floor(d/60)+'j '+(d%60)+'m</strong> &nbsp;·&nbsp; Hari: <strong>'+hk+'</strong>'+(lj>0?' &nbsp;·&nbsp; Lembur: <strong>'+lj.toFixed(1)+'j</strong>':'');
 }
 
-// ── SIMPAN LAPORAN INLINE (dari form di bawah check in/out) ──
-// Absensi sudah tersimpan saat Check In — ini hanya update laporan
+// ── SIMPAN ABSENSI ──
 function simpan(){
-  // Fungsi ini sekarang = simpan laporan
-  simpanLaporanInline();
-}
+  var proyekId=getVal('f-proyek');
+  var mandorId=getVal('f-mandor');
+  var pekerjaId=getVal('f-pekerja');
+  var tanggal=getVal('f-tanggal');
+  var masuk=getVal('f-masuk');
+  var pulang=getVal('f-pulang');
 
-function simpanLaporanInline(){
-  if(!window._absenId) return showAlert('alert-main','Lakukan Check In terlebih dahulu','err');
-  var absen=RIWAYAT.find(function(a){return a.id===window._absenId;});
-  if(!absen) return showAlert('alert-main','Data absensi tidak ditemukan','err');
+  if(!proyekId)  return showAlert('alert-main','Pilih Proyek terlebih dahulu','err');
+  if(!mandorId)  return showAlert('alert-main','Pilih Mandor','err');
+  if(!pekerjaId) return showAlert('alert-main','Pilih Nama Pekerja','err');
+  if(!tanggal)   return showAlert('alert-main','Pilih Tanggal','err');
+  if(!masuk)     return showAlert('alert-main','Lakukan Check In terlebih dahulu','err');
+  if(!pulang)    return showAlert('alert-main','Lakukan Check Out terlebih dahulu','err');
 
-  var lapItems=getLapItems();
-  if(!lapItems.length) return showAlert('alert-main','Masukkan minimal 1 laporan pekerjaan','err');
+  var dup=RIWAYAT.find(function(a){return String(a.pekerjaId)===pekerjaId&&a.tanggal===tanggal&&String(a.proyekId)===proyekId;});
+  if(dup) return showAlert('alert-main','Absensi untuk pekerja, proyek, dan tanggal ini sudah ada!','err');
 
   var btn=document.getElementById('btn-simpan');
-  btn.disabled=true; btn.textContent='Menyimpan...';
+  btn.disabled=true;btn.textContent='Menyimpan...';
 
-  absen.laporanItems=JSON.stringify(lapItems);
-  absen.deskripsi=lapItems.map(function(l){return'['+l.jamMulai+'-'+l.jamSelesai+'] '+l.uraian;}).join(' | ');
+  var pk=MASTER.pekerja.find(function(p){return p.id===pekerjaId;})||{};
+  var hasil=hitungHari(masuk,pulang,Number(pk.upah)||0,Number(pk.lembur)||0);
 
-  apiPost({action:'update_absensi',row:absen},function(res){
-    btn.disabled=false; btn.textContent='💾 Simpan Laporan';
-    if(res.ok){
-      showAlert('alert-main','✅ Laporan berhasil disimpan!','ok');
+  var row={
+    id:uid(),proyekId:proyekId,mandorId:mandorId,pekerjaId:pekerjaId,
+    tanggal:tanggal,masuk:masuk,pulang:pulang,
+    hariKerja:hasil.hk,lemburJam:hasil.lj,
+    upahHarian:Number(pk.upah)||0,upahLembur:Number(pk.lembur)||0,total:hasil.total,
+    deskripsi:'',laporanItems:'[]',
+    status:'pending',catatanReject:'',approvedBy:'',approvedAt:'',
+    createdAt:new Date().toISOString()
+  };
+
+  apiPost({action:'post_absensi',row:row},function(res){
+    btn.disabled=false;btn.textContent='💾 Simpan Absensi';
+    if(res.ok&&res.result!=='duplicate'){
+      RIWAYAT.push(normAbsensi([row])[0]);
+      showAlert('alert-main','✅ Absensi berhasil disimpan! Tambahkan laporan di tab 📸 Foto dan Laporan.','ok');
       renderWeek();
+      // Reset check in/out setelah simpan
+      resetCheckInOut();
       window.scrollTo({top:0,behavior:'smooth'});
     } else if(res.result==='duplicate'){
       showAlert('alert-main','Absensi ini sudah ada di server!','err');
@@ -944,73 +817,46 @@ function simpanLaporanInline(){
   });
 }
 
-// ── TAB FOTO ──
-var mediaFilesFoto = [];
-
+// ── TAB FOTO & LAPORAN ──
 function initFotoTab(){
   var today=todayStr();
   var todayAbs=RIWAYAT.filter(function(a){return a.tanggal===today;});
   var sel=document.getElementById('foto-absensi-sel');
-  var btnFoto=document.getElementById('btn-simpan-foto');
   if(!todayAbs.length){
     sel.innerHTML='<option value="">Tidak ada absensi hari ini</option>';
     document.getElementById('banner-no-absen').classList.remove('hidden');
-    document.getElementById('foto-form-wrap').style.opacity='0.5';
-    if(btnFoto) btnFoto.disabled=true;
+    document.getElementById('foto-form-wrap').style.opacity='0.4';
+    document.getElementById('btn-simpan-laporan').disabled=true;
   } else {
     document.getElementById('banner-no-absen').classList.add('hidden');
     document.getElementById('foto-form-wrap').style.opacity='1';
-    if(btnFoto) btnFoto.disabled=false;
+    document.getElementById('btn-simpan-laporan').disabled=false;
     sel.innerHTML='<option value="">— Pilih absensi —</option>'+
       todayAbs.map(function(a){
         var pk=MASTER.pekerja.find(function(p){return String(p.id)===String(a.pekerjaId);})||{};
         var pr=MASTER.proyek.find(function(p){return String(p.id)===String(a.proyekId);})||{};
-        return'<option value="'+a.id+'">'+(pk.nama||'?')+' — '+(pr.nama||'?')+' ('+a.masuk+'–'+(a.pulang||'belum CO')+')</option>';
+        return'<option value="'+a.id+'">'+(pk.nama||'?')+' — '+(pr.nama||'?')+' ('+a.masuk+'–'+a.pulang+')</option>';
       }).join('');
+    // Auto-select jika hanya 1
     if(todayAbs.length===1) sel.value=todayAbs[0].id;
   }
-  mediaFilesFoto=[];
-  renderMediaFoto();
+  initLap();
+  mediaFiles=[];
+  renderMedia();
 }
 
 function onFotoAbsensiChange(){
-  // Tab foto hanya untuk upload foto tambahan
-  mediaFilesFoto=[];
-  renderMediaFoto();
-}
-
-function handleFilesFoto(files){
-  Array.from(files).forEach(function(f){
-    if(f.size>52428800){alert('File "'+f.name+'" lebih dari 50MB');return;}
-    var r=new FileReader();
-    r.onload=function(e){mediaFilesFoto.push({id:uid(),name:f.name,type:f.type.startsWith('video')?'video':'image',dataUrl:e.target.result});renderMediaFoto();};
-    r.readAsDataURL(f);
-  });
-}
-function renderMediaFoto(){
-  var el=document.getElementById('media-grid-foto');
-  if(!el) return;
-  el.innerHTML=mediaFilesFoto.map(function(f){
-    return'<div class="media-th">'
-      +(f.type==='video'?'<video src="'+f.dataUrl+'" muted playsinline></video><div class="vbadge">VID</div>':'<img src="'+f.dataUrl+'" alt="">')
-      +'<button class="del-media" data-id="'+f.id+'">✕</button></div>';
-  }).join('');
-  el.querySelectorAll('.del-media').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var id=this.getAttribute('data-id');
-      mediaFilesFoto=mediaFilesFoto.filter(function(f){return f.id!==id;});
-      renderMediaFoto();
-    });
-  });
-}
-
-function simpanFoto(){
   var aid=getVal('foto-absensi-sel');
-  if(!aid) return showAlert('alert-foto','Pilih absensi terlebih dahulu','err');
-  if(!mediaFilesFoto.length) return showAlert('alert-foto','Pilih minimal 1 foto/video','err');
-  // Foto disimpan lokal saja (Sheets tidak support binary)
-  showAlert('alert-foto','✅ Foto disimpan di perangkat ini ('+mediaFilesFoto.length+' file).','ok');
-  mediaFilesFoto=[];renderMediaFoto();
+  if(!aid) return;
+  var a=RIWAYAT.find(function(x){return x.id===aid;});
+  if(!a) return;
+  // Isi laporan dari data existing jika ada
+  document.getElementById('lap-wrap').innerHTML='';
+  lapCount=0;
+  var laps=[];
+  try{laps=JSON.parse(a.laporanItems||'[]');}catch(e){}
+  if(laps.length){laps.forEach(function(l){tambahLap(l.jamMulai,l.jamSelesai,l.uraian);});}
+  else tambahLap(a.masuk,'','');
 }
 
 // ── LAPORAN ──
@@ -1056,7 +902,34 @@ function getLapItems(){
   return items;
 }
 
-// simpanLaporan sudah diintegrasikan ke simpanLaporanInline (inline di tab absen)
+// ── SIMPAN LAPORAN & FOTO (tab foto) ──
+function simpanLaporan(){
+  var aid=getVal('foto-absensi-sel');
+  if(!aid) return showAlert('alert-foto','Pilih absensi terlebih dahulu','err');
+  var a=RIWAYAT.find(function(x){return x.id===aid;});
+  if(!a) return showAlert('alert-foto','Absensi tidak ditemukan','err');
+
+  var lapItems=getLapItems();
+  if(!lapItems.length) return showAlert('alert-foto','Masukkan minimal 1 laporan pekerjaan','err');
+
+  var deskrip=lapItems.map(function(l){return'['+l.jamMulai+'-'+l.jamSelesai+'] '+l.uraian;}).join(' | ');
+  a.laporanItems=JSON.stringify(lapItems);
+  a.deskripsi=deskrip;
+
+  var btn=document.getElementById('btn-simpan-laporan');
+  btn.disabled=true;btn.textContent='Menyimpan...';
+
+  apiPost({action:'update_absensi',row:a},function(res){
+    btn.disabled=false;btn.textContent='📤 Simpan Laporan & Foto';
+    if(res.ok){
+      showAlert('alert-foto','✅ Laporan berhasil disimpan!','ok');
+      initLap();mediaFiles=[];renderMedia();
+      document.getElementById('f-files').value='';
+    } else {
+      showAlert('alert-foto','Gagal: '+(res.error||'Error'),'err');
+    }
+  });
+}
 
 // ── UPLOAD FOTO ──
 function handleFiles(files){
