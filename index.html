@@ -161,7 +161,6 @@ tr:hover td{background:#fafafa}
 </head>
 <body>
 
-<!-- SIDEBAR -->
 <div id="sidebar-overlay" onclick="closeSidebar()"></div>
 <div id="sidebar">
   <div class="logo-wrap">
@@ -190,7 +189,6 @@ tr:hover td{background:#fafafa}
   <div class="nav-item" onclick="goto('settings')"><span class="nav-icon">⚙️</span>Konfigurasi</div>
 </div>
 
-<!-- MAIN -->
 <div id="main">
   <div id="topbar">
     <button id="btn-hamburger" onclick="toggleSidebar()">☰</button>
@@ -201,7 +199,6 @@ tr:hover td{background:#fafafa}
 
   <div id="content">
 
-    <!-- SETTINGS (tampil pertama jika belum ada URL) -->
     <div class="page active" id="page-settings">
       <div class="card" style="max-width:560px">
         <div class="card-title">⚙️ Konfigurasi Google Sheets</div>
@@ -232,7 +229,6 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
-    <!-- DASHBOARD -->
     <div class="page" id="page-dashboard">
       <div class="stats-grid" id="stats-grid">
         <div class="stat-card red"><div class="stat-label">Absensi Pending</div><div class="stat-value" id="s-pending">-</div></div>
@@ -246,7 +242,6 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
-    <!-- INPUT ABSENSI -->
     <div class="page" id="page-absensi">
       <div class="card" style="max-width:660px">
         <div class="card-title">✏️ Input Absensi Harian</div>
@@ -283,16 +278,8 @@ tr:hover td{background:#fafafa}
             <input type="time" id="ab-pulang" value="17:00" onchange="hitungDurasi()">
           </div>
           <div class="fg full">
-            <div class="alert alert-info show" id="ab-kalk" style="margin-bottom:0"></div>
+            <div class="alert alert-info show" id="ab-kalk" style="margin-bottom:14px"></div>
           </div>
-        </div>
-        <!-- Multi laporan -->
-        <div class="mb-12">
-          <div class="flex-center justify-between mb-12">
-            <label style="font-size:12px;font-weight:700;color:#555">Laporan Pekerjaan</label>
-            <button class="btn btn-outline btn-sm" onclick="tambahLaporan()">+ Tambah Laporan</button>
-          </div>
-          <div id="laporan-wrap"></div>
         </div>
         <div class="flex gap-8">
           <button class="btn btn-primary" onclick="simpanAbsensi()" id="btn-ab-simpan">💾 Simpan Absensi</button>
@@ -305,12 +292,10 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
-    <!-- VALIDASI SM -->
     <div class="page" id="page-validasi">
       <div class="card">
         <div class="card-title">✅ Validasi Site Manager</div>
         <div class="alert" id="alert-validasi"></div>
-        <!-- Login SM -->
         <div id="sm-login-panel">
           <div class="form-grid" style="max-width:400px">
             <div class="fg">
@@ -324,7 +309,6 @@ tr:hover td{background:#fafafa}
           </div>
           <button class="btn btn-primary" onclick="loginSM()" style="margin-top:8px">🔐 Login</button>
         </div>
-        <!-- Daftar absensi untuk validasi -->
         <div id="sm-validasi-panel" style="display:none">
           <div class="flex-center justify-between mb-12">
             <span style="font-size:13px;color:#666">Login sebagai: <strong id="sm-logged-name"></strong></span>
@@ -339,7 +323,6 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
-    <!-- REKAP & PRINT -->
     <div class="page" id="page-rekap">
       <div class="card">
         <div class="card-title">🖨️ Rekap &amp; Print Upah</div>
@@ -386,7 +369,6 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
-    <!-- PEKERJA -->
     <div class="page" id="page-pekerja">
       <div class="card">
         <div class="card-title">👷 Data Pekerja</div>
@@ -412,7 +394,6 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
-    <!-- MANDOR -->
     <div class="page" id="page-mandor">
       <div class="card">
         <div class="card-title">🦺 Data Mandor</div>
@@ -431,7 +412,6 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
-    <!-- SITE MANAGER -->
     <div class="page" id="page-sm">
       <div class="card">
         <div class="card-title">🏗️ Data Site Manager</div>
@@ -452,7 +432,6 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
-    <!-- PROYEK -->
     <div class="page" id="page-proyek">
       <div class="card">
         <div class="card-title">📁 Data Proyek</div>
@@ -479,11 +458,7 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
-  </div><!-- /content -->
-</div><!-- /main -->
-
-<!-- PRINT AREA -->
-<div id="print-area"></div>
+  </div></div><div id="print-area"></div>
 
 <script>
 // ═══════════════════════════════════════════════════════
@@ -495,7 +470,6 @@ var GS_URL = '';
 // In-memory store (tidak ada localStorage untuk data)
 var DB = { proyek:[], mandor:[], pekerja:[], sm:[], absensi:[] };
 var SM_LOGGED = null; // {id, nama, pin, proyekIds[]}
-var lapCount = 0;
 var editIds = { pekerja:'', mandor:'', sm:'', proyek:'', absensi:'' };
 
 var BLN  = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
@@ -1113,7 +1087,6 @@ function initAbsensi() {
         return '<option value="'+p.id+'">'+p.nama+'</option>';
       }).join('');
   setFieldVal('ab-tanggal', todayStr());
-  resetLaporan();
   hitungDurasi();
   renderAbsensiHariIni();
 }
@@ -1151,52 +1124,6 @@ function hitungDurasi() {
     +(pk?' &nbsp;·&nbsp; Estimasi: <strong>'+rupiah(total)+'</strong>':'');
 }
 
-function resetLaporan() {
-  lapCount=0;
-  document.getElementById('laporan-wrap').innerHTML='';
-  tambahLaporan();
-}
-
-function tambahLaporan() {
-  lapCount++;
-  var id='lap'+lapCount;
-  var masuk=getFieldVal('ab-masuk')||'08:00';
-  var pulang=getFieldVal('ab-pulang')||'17:00';
-  var wrap=document.getElementById('laporan-wrap');
-  var div=document.createElement('div');
-  div.id=id;
-  div.style.cssText='background:#f8faff;border:1.5px solid #dbeafe;border-radius:10px;padding:12px;margin-bottom:10px';
-  div.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
-    +'<span style="font-size:12px;font-weight:700;color:#1d4ed8">Laporan #'+lapCount+'</span>'
-    +(lapCount>1?'<button onclick="hapusLaporan(\''+id+'\')" style="background:#fee2e2;border:none;border-radius:6px;padding:4px 10px;font-size:12px;color:#dc2626;cursor:pointer">✕ Hapus</button>':'')
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
-    +'<div class="fg"><label style="font-size:11px">Jam Mulai</label><input type="time" id="'+id+'-mulai" value="'+masuk+'"></div>'
-    +'<div class="fg"><label style="font-size:11px">Jam Selesai</label><input type="time" id="'+id+'-selesai" value="'+pulang+'"></div>'
-    +'</div>'
-    +'<div class="fg"><label style="font-size:11px">Uraian Pekerjaan</label>'
-    +'<textarea id="'+id+'-uraian" style="min-height:64px" placeholder="Contoh: Pemasangan lampu LED koridor lantai 2..."></textarea></div>';
-  wrap.appendChild(div);
-}
-
-function hapusLaporan(id) {
-  var el=document.getElementById(id);
-  if(el) el.remove();
-}
-
-function getLaporanItems() {
-  var items=[];
-  document.querySelectorAll('#laporan-wrap [id^="lap"]').forEach(function(div){
-    var id=div.id;
-    if(!id.match(/^lap\d+$/)) return;
-    var mulai=(document.getElementById(id+'-mulai')||{}).value||'';
-    var selesai=(document.getElementById(id+'-selesai')||{}).value||'';
-    var uraian=((document.getElementById(id+'-uraian')||{}).value||'').trim();
-    if(uraian) items.push({jamMulai:mulai,jamSelesai:selesai,uraian:uraian});
-  });
-  return items;
-}
-
 function simpanAbsensi() {
   var proyekId  = getFieldVal('ab-proyek');
   var mandorId  = getFieldVal('ab-mandor');
@@ -1219,8 +1146,10 @@ function simpanAbsensi() {
 
   var pk    = DB.pekerja.find(function(p){ return String(p.id)===pekerjaId; })||{};
   var hasil = hitungAbsensi(masuk, pulang, Number(pk.upah)||0, Number(pk.lembur)||0);
-  var lapItems = getLaporanItems();
-  var deskrip  = lapItems.map(function(l){ return '['+l.jamMulai+'-'+l.jamSelesai+'] '+l.uraian; }).join(' | ');
+  
+  // Dikosongkan agar laporan hanya diisi oleh pekerja di aplikasinya
+  var lapItems = [];
+  var deskrip  = '';
 
   var row = {
     id: uid(), proyekId:proyekId, mandorId:mandorId, pekerjaId:pekerjaId,
@@ -1254,7 +1183,7 @@ function resetAbsensi() {
   setFieldVal('ab-proyek',''); setFieldVal('ab-mandor',''); setFieldVal('ab-pekerja','');
   setFieldVal('ab-tanggal', todayStr());
   setFieldVal('ab-masuk','08:00'); setFieldVal('ab-pulang','17:00');
-  resetLaporan(); hitungDurasi();
+  hitungDurasi();
 }
 
 function renderAbsensiHariIni() {
@@ -1374,13 +1303,10 @@ function renderValidasiList() {
   var el = document.getElementById('val-list');
 
   // Tab bar
-  var t1 = valFilter==="pending"  ? "btn-primary" : "btn-ghost";
-  var t2 = valFilter==="approved" ? "btn-primary" : "btn-ghost";
-  var t3 = valFilter==="all"      ? "btn-primary" : "btn-ghost";
   var tabs = '<div style="display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap">'
-    +'<button id="val-tab-pending"  class="btn btn-sm val-tab '+t1+'" onclick="setValFilter(this.dataset.f)" data-f="pending">⏳ Pending ('+pendingCount+')</button>'
-    +'<button id="val-tab-approved" class="btn btn-sm val-tab '+t2+'" onclick="setValFilter(this.dataset.f)" data-f="approved">✅ Sudah Divalidasi</button>'
-    +'<button id="val-tab-all"      class="btn btn-sm val-tab '+t3+'" onclick="setValFilter(this.dataset.f)" data-f="all">📋 Semua</button>'
+    +'<button id="val-tab-pending" class="btn btn-sm val-tab '+(valFilter==="pending"?"btn-primary":"btn-ghost")+'" onclick="setValFilter(\'pending\')">⏳ Pending ('+pendingCount+')</button>'
+    +'<button id="val-tab-approved" class="btn btn-sm val-tab '+(valFilter==="approved"?"btn-primary":"btn-ghost")+'" onclick="setValFilter(\'approved\')">✅ Sudah Divalidasi</button>'
+    +'<button id="val-tab-all" class="btn btn-sm val-tab '+(valFilter==="all"?"btn-primary":"btn-ghost")+'" onclick="setValFilter(\'all\')">📋 Semua</button>'
     +'</div>';
 
   if(!list.length){
@@ -1412,20 +1338,19 @@ function renderValidasiList() {
 
     var stBadge = {pending:'badge-pending', approved:'badge-approved', rejected:'badge-rejected'};
 
-    // Aksi — gunakan data-attribute untuk hindari quote conflict
-    var aid = String(a.id);
+    // Aksi — REVISI 2: edit + ubah status, semua status bisa diedit
     var aksi = '<div style="display:flex;flex-direction:column;gap:4px">';
     if(a.status==='pending'){
-      aksi += '<button class="btn btn-sm btn-green" data-id="'+aid+'" onclick="approveAbsensi(this.dataset.id)">✅ Approve</button>'
-            + '<button class="btn btn-sm btn-danger" data-id="'+aid+'" onclick="rejectAbsensi(this.dataset.id)">❌ Tolak</button>';
+      aksi += '<button class="btn btn-sm btn-green" onclick="approveAbsensi(\''+a.id+'\')">✅ Approve</button>'
+            + '<button class="btn btn-sm btn-danger" onclick="rejectAbsensi(\''+a.id+'\')">❌ Tolak</button>';
     } else if(a.status==='approved'){
-      aksi += '<button class="btn btn-sm btn-danger" data-id="'+aid+'" onclick="rejectAbsensi(this.dataset.id)">❌ Tolak</button>'
-            + '<button class="btn btn-sm btn-outline" data-id="'+aid+'" onclick="setPending(this.dataset.id)">⏳ Pending</button>';
+      aksi += '<button class="btn btn-sm btn-danger" onclick="rejectAbsensi(\''+a.id+'\')">❌ Tolak</button>'
+            + '<button class="btn btn-sm btn-outline" onclick="setPending(\''+a.id+'\')">⏳ Pending</button>';
     } else {
-      aksi += '<button class="btn btn-sm btn-green" data-id="'+aid+'" onclick="approveAbsensi(this.dataset.id)">✅ Approve</button>'
-            + '<button class="btn btn-sm btn-outline" data-id="'+aid+'" onclick="setPending(this.dataset.id)">⏳ Pending</button>';
+      aksi += '<button class="btn btn-sm btn-green" onclick="approveAbsensi(\''+a.id+'\')">✅ Approve</button>'
+            + '<button class="btn btn-sm btn-outline" onclick="setPending(\''+a.id+'\')">⏳ Pending</button>';
     }
-    aksi += '<button class="btn btn-sm" style="background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe" data-id="'+aid+'" onclick="editAbsensiSM(this.dataset.id)">✏️ Edit</button>';
+    aksi += '<button class="btn btn-sm" style="background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe" onclick="editAbsensiSM(\''+a.id+'\')">✏️ Edit</button>';
     aksi += '</div>';
 
     return '<tr>'
@@ -1494,7 +1419,6 @@ function editAbsensiSM(id) {
   var pk = DB.pekerja.find(function(p){return String(p.id)===String(a.pekerjaId);})||{};
   var pr = DB.proyek.find(function(p){return String(p.id)===String(a.proyekId); })||{};
 
-  window._editSmId = id; // simpan id untuk simpanEditSM
   var existing = document.getElementById('modal-edit-sm');
   if(existing) existing.remove();
 
@@ -1520,7 +1444,7 @@ function editAbsensiSM(id) {
     +'</div>'
     +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid #f0f0f0">'
     +'<button class="btn btn-ghost" onclick="tutupModalEdit()">Batal</button>'
-    +'<button class="btn btn-primary" id="btn-simpan-edit" onclick="simpanEditSM(window._editSmId)">💾 Simpan Perubahan</button>'
+    +'<button class="btn btn-primary" id="btn-simpan-edit" onclick="simpanEditSM(\''+id+'\')">💾 Simpan Perubahan</button>'
     +'</div>'
     +'</div></div>';
 
@@ -1559,7 +1483,7 @@ function tambahLapEdit(mulai, selesai, uraian) {
   div.style.cssText = 'background:#f8faff;border:1.5px solid #dbeafe;border-radius:10px;padding:12px;margin-bottom:8px';
   div.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
     +'<span style="font-size:12px;font-weight:700;color:#1d4ed8">Laporan #'+window._editLapCount+'</span>'
-    +(window._editLapCount>1?'<button onclick="hapusLapEditItem(this)" style="background:#fee2e2;border:none;border-radius:6px;padding:3px 10px;font-size:12px;color:#dc2626;cursor:pointer">✕ Hapus</button>':'')
+    +(window._editLapCount>1?'<button onclick="this.closest(\'[id^=elap]\').remove()" style="background:#fee2e2;border:none;border-radius:6px;padding:3px 10px;font-size:12px;color:#dc2626;cursor:pointer">✕ Hapus</button>':'')
     +'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
     +'<div class="fg"><label style="font-size:11px">Jam Mulai</label><input type="time" id="'+id+'-mulai" value="'+(mulai||'08:00')+'"></div>'
@@ -1571,7 +1495,6 @@ function tambahLapEdit(mulai, selesai, uraian) {
 }
 
 function simpanEditSM(id) {
-  id = id || window._editSmId;
   var a = DB.absensi.find(function(x){ return x.id===id; });
   if(!a) return;
   var masuk  = (document.getElementById('edit-masuk') ||{}).value || a.masuk;
@@ -1614,8 +1537,6 @@ function simpanEditSM(id) {
     }
   });
 }
-
-function hapusLapEditItem(btn) { var p=btn.parentElement; if(p) p.remove(); }
 
 function tutupModalEdit() {
   var m=document.getElementById('modal-edit-sm');
