@@ -442,33 +442,26 @@ function apiGet(params,cb){
   el.src=GS_URL+'?'+qs+'&callback='+cbName;
   document.head.appendChild(el);
 }
-function apiPost(body,cb){
-  if(!GS_URL){cb({ok:false,error:'URL belum dikonfigurasi'});return;}
-  var called=false;
-  var cbName='_kjpw'+Date.now()+Math.floor(Math.random()*9999);
-  var el=document.createElement('script');
-  var timer=window.setTimeout(function(){
-    if(called) return; called=true;
-    delete window[cbName];
-    if(el.parentNode) el.parentNode.removeChild(el);
-    cb({ok:false,error:'Timeout saat menyimpan.'});
-  },20000);
-  window[cbName]=function(data){
-    if(called) return; called=true;
-    window.clearTimeout(timer);
-    delete window[cbName];
-    if(el.parentNode) el.parentNode.removeChild(el);
+function apiPost(body, cb) {
+  if (!GS_URL) { cb({ok: false, error: 'URL belum dikonfigurasi'}); return; }
+  
+  // Menggunakan Fetch API POST untuk mengatasi batasan panjang karakter pada URL
+  fetch(GS_URL, {
+    method: 'POST',
+    // Menggunakan text/plain agar Google Apps Script tidak memblokir masalah CORS
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body)
+  })
+  .then(function(response) {
+    if (!response.ok) throw new Error('Network response was not ok');
+    return response.json();
+  })
+  .then(function(data) {
     cb(data);
-  };
-  el.onerror=function(){
-    if(called) return; called=true;
-    window.clearTimeout(timer);
-    delete window[cbName];
-    cb({ok:false,error:'Network error saat menyimpan.'});
-  };
-  var qs='payload='+encodeURIComponent(JSON.stringify(body))+'&callback='+cbName;
-  el.src=GS_URL+'?'+qs;
-  document.head.appendChild(el);
+  })
+  .catch(function(error) {
+    cb({ok: false, error: 'Network error saat menyimpan data besar.'});
+  });
 }
 
 // ── INIT ──
