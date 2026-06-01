@@ -126,6 +126,7 @@ tr:hover td{background:#fafafa}
 </head>
 <body>
 
+<!-- ══════════════════ FORM LOGIN ══════════════════ -->
 <div id="login-container">
   <div class="login-box">
     <div class="login-header">
@@ -158,6 +159,7 @@ tr:hover td{background:#fafafa}
 
 <div id="sidebar-overlay" onclick="closeSidebar()"></div>
 
+<!-- ══════════════════ SIDEBAR NAVIGATION ══════════════════ -->
 <div id="sidebar">
   <div class="logo-wrap">
     <svg width="28" height="28" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
@@ -193,6 +195,7 @@ tr:hover td{background:#fafafa}
   </div>
 </div>
 
+<!-- ══════════════════ MAIN AREA ══════════════════ -->
 <div id="main">
   <div id="topbar">
     <button id="btn-hamburger" onclick="toggleSidebar()">☰</button>
@@ -208,6 +211,7 @@ tr:hover td{background:#fafafa}
 
   <div id="content">
 
+    <!-- PAGE: CONFIGURATION -->
     <div class="page" id="page-settings">
       <div class="card" style="max-width:560px">
         <div class="card-title">⚙️ Konfigurasi Google Sheets</div>
@@ -227,6 +231,7 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
+    <!-- PAGE: DASHBOARD -->
     <div class="page" id="page-dashboard">
       <div class="stats-grid">
         <div class="stat-card red"><div class="stat-label">Absensi Pending</div><div class="stat-value" id="s-pending">-</div></div>
@@ -240,6 +245,7 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
+    <!-- PAGE: INPUT ABSENSI -->
     <div class="page" id="page-absensi">
       <div class="card" style="max-width:660px">
         <div class="card-title">✏️ Input Absensi Harian</div>
@@ -247,7 +253,7 @@ tr:hover td{background:#fafafa}
         <div class="form-grid">
           <div class="fg"><label>Proyek</label><select id="ab-proyek" onchange="onAbProyekChange()"></select></div>
           <div class="fg"><label>Mandor</label><select id="ab-mandor"></select></div>
-          <div class="fg"><label>Pekerja</label><select id="ab-pekerja" onchange="hitungDurasi()"></select></div>
+          <div class="fg"><label>Pekerja</label><select id="ab-pekerja" onchange="hitungDurasi()"><option value="">— Pilih Proyek Terlebih Dahulu —</option></select></div>
           <div class="fg"><label>Tanggal</label><input type="date" id="ab-tanggal" onchange="hitungDurasi()"></div>
           <div class="fg"><label>Jam Masuk</label><input type="time" id="ab-masuk" value="08:00" onchange="hitungDurasi()"></div>
           <div class="fg"><label>Jam Pulang</label><input type="time" id="ab-pulang" value="17:00" onchange="hitungDurasi()"></div>
@@ -263,6 +269,7 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
+    <!-- PAGE: VALIDASI SITE MANAGER -->
     <div class="page" id="page-validasi">
       <div class="card">
         <div class="card-title">✅ Validasi Laporan Lapangan</div>
@@ -274,6 +281,7 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
+    <!-- PAGE: REKAP PRINT -->
     <div class="page" id="page-rekap">
       <div class="card">
         <div class="card-title">🖨️ Rekap Absensi &amp; Penggajian</div>
@@ -287,6 +295,7 @@ tr:hover td{background:#fafafa}
       <div id="rekap-result" style="display:none"><div id="rekap-table"></div></div>
     </div>
 
+    <!-- PAGE: PURCHASE REQUISITION -->
     <div class="page" id="page-pr">
       <div class="flex gap-8 mb-12" style="justify-content:space-between">
         <button class="btn btn-primary" onclick="prBuatBaru()">➕ PR Baru</button>
@@ -316,12 +325,13 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
+    <!-- PAGE: DATA PEKERJA -->
     <div class="page" id="page-pekerja">
       <div class="card">
         <div class="card-title">👷 Data Pekerja</div>
         <div class="alert" id="alert-pekerja"></div>
         <div class="form-grid mb-12">
-          <div class="fg"><label>Nama</label><input type="text" id="pk-nama" placeholder="Nama lengkap"></div>
+          <div class="fg"><label>Nama Pekerja</label><input type="text" id="pk-nama" placeholder="Nama lengkap"></div>
           <div class="fg">
             <label>Jabatan</label>
             <select id="pk-jabatan">
@@ -341,12 +351,13 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
+    <!-- PAGE: DATA MANDOR -->
     <div class="page" id="page-mandor">
       <div class="card">
         <div class="card-title">🦺 Data Mandor</div>
         <div class="alert" id="alert-mandor"></div>
         <div class="form-grid mb-12">
-          <div class="fg"><label>Nama</label><input type="text" id="mn-nama" placeholder="Nama mandor"></div>
+          <div class="fg"><label>Nama Mandor</label><input type="text" id="mn-nama" placeholder="Nama mandor"></div>
           <div class="fg"><label>Spesialisasi</label><input type="text" id="mn-spesialis" placeholder="Sipil, MEP, dll"></div>
           <div class="fg"><label>No. HP</label><input type="text" id="mn-hp" placeholder="08xxx"></div>
           <div class="fg"><label>No. Rekening</label><input type="text" id="mn-rek" placeholder="Bank - Rekening"></div>
@@ -359,17 +370,18 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
+    <!-- PAGE: DATA SITE MANAGER -->
     <div class="page" id="page-sm">
       <div class="card">
         <div class="card-title">🏗️ Data Site Manager</div>
         <div class="alert" id="alert-sm"></div>
         <div class="form-grid mb-12">
-          <div class="fg"><label>Nama</label><input type="text" id="sm-nama" placeholder="Nama SM"></div>
+          <div class="fg"><label>Nama SM</label><input type="text" id="sm-nama" placeholder="Nama SM"></div>
           <div class="fg"><label>No. HP</label><input type="text" id="sm-hp" placeholder="08xxx"></div>
           <div class="fg"><label>PIN Validasi</label><input type="password" id="sm-pin" placeholder="••••"></div>
           <div class="fg"><label>Proyek yang Diawasi</label>
             <select id="sm-proyek-select" multiple style="min-height:90px; padding:6px; background:#fff;"></select>
-            <small style="color:#666; margin-top:2px;">*Tahan tombol Ctrl (Windows) / Command (Mac) untuk memilih lebih dari 1 proyek.</small>
+            <small style="color:#666; margin-top:2px;">*Tahan tombol Ctrl / Command untuk memilih multi-proyek.</small>
           </div>
         </div>
         <div class="flex gap-8 mb-12">
@@ -380,6 +392,7 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
+    <!-- PAGE: DATA PROYEK -->
     <div class="page" id="page-proyek">
       <div class="card">
         <div class="card-title">📁 Data Proyek</div>
@@ -428,30 +441,18 @@ var ROLE_PERMISSIONS = {
 };
 
 // ═══════════════════════════════════════════════════════
-// DROPDOWN BUILDER (MENGHILANGKAN MANDATORY INPUT ID)
+// DROPDOWN BUILDER & SMART FILTER CONTROLLER
 // ═══════════════════════════════════════════════════════
 function refreshAllDropdowns() {
-  // 1. Dropdown Mandor di Form Proyek
   var prMandorSel = document.getElementById('pr-mandor-select');
-  if(prMandorSel) {
-    prMandorSel.innerHTML = '<option value="">— Pilih Mandor —</option>' + 
-      DB.mandor.map(function(m){ return '<option value="'+m.id+'">'+m.nama+'</option>'; }).join('');
-  }
+  if(prMandorSel) prMandorSel.innerHTML = '<option value="">— Pilih Mandor —</option>' + DB.mandor.map(function(m){ return '<option value="'+m.id+'">'+m.nama+'</option>'; }).join('');
 
-  // 2. Dropdown SM di Form Proyek
   var prSmSel = document.getElementById('pr-sm-select');
-  if(prSmSel) {
-    prSmSel.innerHTML = '<option value="">— Pilih Site Manager —</option>' + 
-      DB.sm.map(function(s){ return '<option value="'+s.id+'">'+s.nama+'</option>'; }).join('');
-  }
+  if(prSmSel) prSmSel.innerHTML = '<option value="">— Pilih Site Manager —</option>' + DB.sm.map(function(s){ return '<option value="'+s.id+'">'+s.nama+'</option>'; }).join('');
 
-  // 3. Dropdown Proyek di Form SM (Multi-select)
   var smProyekSel = document.getElementById('sm-proyek-select');
-  if(smProyekSel) {
-    smProyekSel.innerHTML = DB.proyek.map(function(p){ return '<option value="'+p.id+'">'+p.nama+'</option>'; }).join('');
-  }
+  if(smProyekSel) smProyekSel.innerHTML = DB.proyek.map(function(p){ return '<option value="'+p.id+'">'+p.nama+'</option>'; }).join('');
 
-  // 4. Dropdown di halaman operasional utama (Absensi, Rekap, PR)
   var abProyek = document.getElementById('ab-proyek');
   if(abProyek) abProyek.innerHTML = '<option value="">— Pilih Proyek —</option>' + DB.proyek.map(function(p){ return '<option value="'+p.id+'">'+p.nama+'</option>'; }).join('');
 
@@ -460,6 +461,58 @@ function refreshAllDropdowns() {
 
   var prProyekSel = document.getElementById('pr-proyek-sel');
   if(prProyekSel) prProyekSel.innerHTML = '<option value="">— Pilih Project —</option>' + DB.proyek.map(function(p){ return '<option value="'+p.id+'">'+p.nama+'</option>'; }).join('');
+}
+
+// REVISI: FILTER DROPDOWN PEKERJA BERDASARKAN MANDOR DARI PROYEK + SMART DUPLICATE IDENTIFIER
+function onAbProyekChange() {
+  var pId = document.getElementById('ab-proyek').value;
+  var mSel = document.getElementById('ab-mandor');
+  var pkSel = document.getElementById('ab-pekerja');
+  
+  mSel.innerHTML = '<option value="">— Pilih Mandor PJ —</option>' + DB.mandor.map(function(m){ return '<option value="'+m.id+'">'+m.nama+'</option>'; }).join('');
+  
+  var pr = DB.proyek.find(function(x){ return x.id === pId; });
+  if(!pr) {
+    pkSel.innerHTML = '<option value="">— Pilih Proyek Terlebih Dahulu —</option>';
+    return;
+  }
+  
+  if(pr.mandorId) mSel.value = pr.mandorId;
+
+  // Saring pekerja yang terikat dengan Mandor dari Proyek terpilih
+  var filteredPekerja = DB.pekerja.filter(function(p) {
+    return p.jabatan === 'Mandor' ? p.id === pr.mandorId : true; 
+  });
+
+  if(filteredPekerja.length === 0) {
+    pkSel.innerHTML = '<option value="">— Tidak ada pekerja di proyek ini —</option>';
+    return;
+  }
+
+  // Cari list nama untuk deteksi duplikasi nama sama
+  var namaCounts = {};
+  filteredPekerja.forEach(function(p) {
+    var n = p.nama.trim().toLowerCase();
+    namaCounts[n] = (namaCounts[n] || 0) + 1;
+  });
+
+  // Susun element dropdown opsi pembeda
+  pkSel.innerHTML = '<option value="">— Pilih Personel Pekerja —</option>' + 
+    filteredPekerja.map(function(p) {
+      var isDuplicate = namaCounts[p.nama.trim().toLowerCase()] > 1;
+      var labelPembeda = p.nama;
+      
+      if(isDuplicate) {
+        var last4Hp = p.hp ? p.hp.substr(-4) : '❌HP';
+        labelPembeda += ' (' + p.jabatan + ' - *' + last4Hp + ')';
+      } else {
+        labelPembeda += ' (' + p.jabatan + ')';
+      }
+      
+      return '<option value="'+p.id+'">'+labelPembeda+'</option>';
+    }).join('');
+
+  hitungDurasi();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -591,7 +644,7 @@ function loadAll(cb) {
     DB.absensi = res.data.absensi || [];
     
     setBadge('ok');
-    refreshAllDropdowns(); // Update dropdown setiap kali data diperbarui
+    refreshAllDropdowns();
     if(cb) cb(true);
   });
 }
@@ -636,18 +689,10 @@ function renderDashboard() {
 }
 
 function initAbsensi() {
-  document.getElementById('ab-pekerja').innerHTML = '<option value="">— Pilih Karyawan Pekerja —</option>' + DB.pekerja.map(function(p){ return '<option value="'+p.id+'">'+p.nama+'</option>'; }).join('');
   document.getElementById('ab-tanggal').value = new Date().toISOString().split('T')[0];
   refreshAllDropdowns();
-  onAbProyekChange(); hitungDurasi();
-}
-
-function onAbProyekChange() {
-  var pId = document.getElementById('ab-proyek').value;
-  var mSel = document.getElementById('ab-mandor');
-  var pr = DB.proyek.find(function(x){ return x.id === pId; });
-  mSel.innerHTML = '<option value="">— Pilih Mandor PJ —</option>' + DB.mandor.map(function(m){ return '<option value="'+m.id+'">'+m.nama+'</option>'; }).join('');
-  if(pr && pr.mandorId) mSel.value = pr.mandorId;
+  document.getElementById('ab-pekerja').innerHTML = '<option value="">— Pilih Proyek Terlebih Dahulu —</option>';
+  hitungDurasi();
 }
 
 function hitungDurasi() {
@@ -750,7 +795,7 @@ function prBuatBaru() { initPR(); }
 function prSimpan() { showAlert('alert-pr', 'success', 'Dokumen Purchase Requisition berhasil diamankan secara lokal.'); }
 
 // ═══════════════════════════════════════════════════════
-// CRUD MASTER DATA MODULES WITH DROPDOWNS
+// CRUD MASTER DATA MODULES 
 // ═══════════════════════════════════════════════════════
 
 // --- DATA MASTER PEKERJA ---
@@ -845,8 +890,6 @@ function renderSM() {
 }
 function simpanSM() {
   var nama = document.getElementById('sm-nama').value.trim(); if(!nama) return alert('Nama wajib diisi!');
-  
-  // Ambil multi-select nilai proyek dari dropdown list
   var selectEl = document.getElementById('sm-proyek-select');
   var selectedProyeks = Array.from(selectEl.selectedOptions).map(function(opt){ return opt.value; }).join(',');
 
@@ -866,13 +909,11 @@ function editSM(id) {
   document.getElementById('sm-nama').value = s.nama; document.getElementById('sm-hp').value = s.hp;
   document.getElementById('sm-pin').value = s.pin;
   
-  // Set nilai terpilih pada multi-select dropdown
   var selectEl = document.getElementById('sm-proyek-select');
   var arrIds = String(s.proyekIds || '').split(',').map(function(i){ return i.trim(); });
   Array.from(selectEl.options).forEach(function(opt) {
     opt.selected = arrIds.includes(opt.value);
   });
-
   document.getElementById('btn-sm-simpan').textContent = '💾 Update SM';
 }
 function hapusSM(id) {
