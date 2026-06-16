@@ -1,14 +1,9 @@
-// ==========================================
-// KODE GOOGLE APPS SCRIPT - ABSENSI KJP
-// ==========================================
-
 function doGet(e) {
   var action = e.parameter.action;
   var callback = e.parameter.callback;
   var result = { ok: false, error: "Aksi tidak dikenal" };
 
   try {
-    // 1. Ambil Data Master (Proyek, Mandor, Pekerja)
     if (action === "get_master") {
       result = {
         ok: true,
@@ -18,9 +13,7 @@ function doGet(e) {
           pekerja: getSheetDataAsJson("Pekerja")
         }
       };
-    }
-    // 2. Ambil Data Riwayat Absensi Berdasarkan Range Tanggal
-    else if (action === "get_absensi") {
+    } else if (action === "get_absensi") {
       var dari = e.parameter.dari;
       var sampai = e.parameter.sampai;
       result = {
@@ -32,7 +25,6 @@ function doGet(e) {
     result = { ok: false, error: err.toString() };
   }
 
-  // Output dibungkus JSONP agar tidak terkena CORS / Blokir browser
   var jsonString = JSON.stringify(result);
   return ContentService.createTextOutput(callback + "(" + jsonString + ")")
     .setMimeType(ContentService.MimeType.JAVASCRIPT);
@@ -51,9 +43,7 @@ function doPost(e) {
                             .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 3. Simpan Check In Baru
     if (action === "post_absensi") {
-      // Cek duplikasi (Pekerja + Tanggal + Proyek)
       var danData = sheet.getDataRange().getValues();
       var isDuplicate = false;
       for (var i = 1; i < danData.length; i++) {
@@ -77,20 +67,17 @@ function doPost(e) {
         ]);
         result = { ok: true, result: "success" };
       }
-    }
-    // 4. Update Check Out / Laporan Foto Manual
-    else if (action === "update_absensi") {
+    } else if (action === "update_absensi") {
       var data = sheet.getDataRange().getValues();
       var targetIndex = -1;
       for (var i = 1; i < data.length; i++) {
-        if (String(data[i][0]) === String(rowData.id)) { // Cocokkan ID unik absensi
+        if (String(data[i][0]) === String(rowData.id)) {
           targetIndex = i + 1;
           break;
         }
       }
 
       if (targetIndex !== -1) {
-        // Update kolom-kolom yang berubah
         sheet.getRange(targetIndex, 6).setValue(rowData.masuk);
         sheet.getRange(targetIndex, 7).setValue(rowData.pulang);
         sheet.getRange(targetIndex, 8).setValue(rowData.hariKerja);
@@ -101,7 +88,7 @@ function doPost(e) {
         sheet.getRange(targetIndex, 15).setValue(rowData.foto);
         result = { ok: true };
       } else {
-        result = { ok: false, error: "ID Absensi tidak ditemukan di server untuk diupdate" };
+        result = { ok: false, error: "ID Absensi tidak ditemukan" };
       }
     }
   } catch (err) {
@@ -111,8 +98,6 @@ function doPost(e) {
   return ContentService.createTextOutput(JSON.stringify(result))
     .setMimeType(ContentService.MimeType.JSON);
 }
-
-// --- FUNGSI PEMBANTU (HELPERS) ---
 
 function getSheetDataAsJson(sheetName) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
@@ -127,7 +112,6 @@ function getSheetDataAsJson(sheetName) {
     var obj = {};
     for (var j = 0; j < headers.length; j++) {
       var cellValue = row[j];
-      // Format Tanggal agar aman dibaca HTML
       if (cellValue instanceof Date) {
         cellValue = Utilities.formatDate(cellValue, Session.getScriptTimeZone(), "yyyy-MM-dd");
       }
@@ -156,8 +140,6 @@ function getAbsensiData(dari, sampai) {
       }
       obj[headers[j]] = val;
     }
-    
-    // Filter tanggal riwayat sesuai yang diminta HTML
     if (obj.tanggal >= dari && obj.tanggal <= sampai) {
       data.push(obj);
     }
