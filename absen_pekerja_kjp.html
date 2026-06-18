@@ -470,8 +470,7 @@ function init(){
   document.getElementById('hdr-date').innerHTML=
     HARI[now.getDay()]+'<br>'+now.getDate()+' '+BLN[now.getMonth()]+' '+now.getFullYear();
 
-  try{GS_URL=sessionStorage.getItem(LS_URL)||'';}catch(e){}
-
+  // Event Listener tetap dibiarkan
   document.getElementById('btn-setup').addEventListener('click',simpanSetup);
   document.getElementById('btn-add-lap').addEventListener('click',tambahLap);
   document.getElementById('btn-simpan-laporan').addEventListener('click',simpanLaporan);
@@ -487,8 +486,8 @@ function init(){
   document.getElementById('hist-pk').addEventListener('change',renderRiwayat);
   document.getElementById('foto-absensi-sel').addEventListener('change',onFotoAbsensiChange);
 
-  if(GS_URL){ muatMaster(); } 
-  else { show('setup-panel'); setStatus('Masukkan URL Apps Script untuk memulai','warn'); }
+  // Langsung eksekusi pemanggilan database otomatis!
+  muatMaster(); 
 }
 
 function simpanSetup(){
