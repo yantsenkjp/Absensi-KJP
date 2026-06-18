@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Admin KJP - ERP System</title>
+<title>Admin KJP - ERP System & Laporan B/A</title>
 <style>
 /* ── RESET & BASE ── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -68,9 +68,10 @@ body.logged-in #main{display:flex;margin-left:220px}
 .fg label{font-size:12px;font-weight:600;color:#555}
 input,select,textarea{width:100%;padding:9px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:14px;font-family:inherit;background:#fff;color:#111;outline:none;transition:border-color .15s}
 input:focus,select:focus,textarea:focus{border-color:#C8102E}
-textarea{resize:vertical;min-height:72px;font-size:13px}
+textarea{resize:vertical;min-height:72px;font-size:13px; margin-bottom: 0;}
 select{cursor:pointer}
 input[readonly]{background:#f5f5f5;color:#888}
+.flex{display:flex} .gap-8{gap:8px} .mb-12{margin-bottom:12px} .mb-16{margin-bottom:16px} .mt-16{margin-top:16px}
 
 /* ── BUTTONS ── */
 .btn{padding:9px 16px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;font-family:inherit;-webkit-tap-highlight-color:transparent}
@@ -112,6 +113,38 @@ tr:hover td{background:#fafafa}
 #pr-item-table td.pr-td-total { background:#f9f9f9; }
 #pr-item-table td.pr-td-total input { font-weight:700;color:#111;text-align:right; }
 
+/* ── LAPORAN BEFORE-AFTER STYLES ── */
+.item-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin-bottom: 16px; position: relative; }
+.item-box .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.item-box .item-num { font-size: 14px; font-weight: 700; color: #1e293b; }
+.ba-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px; }
+@media (max-width: 600px) { .ba-grid { grid-template-columns: 1fr; } }
+.photo-box { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 12px; text-align: center; background: #fff; }
+.photo-box .tag { font-weight: 700; font-size: 13px; margin-bottom: 8px; }
+.tag.before { color: #dc2626; } .tag.after { color: #16a34a; }
+.photo-box img { max-width: 100%; border-radius: 8px; margin-top: 8px; display: none; max-height: 150px; object-fit: contain; }
+.photo-box img.show { display: inline-block; }
+.report-item { border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px; background: #fff; }
+.report-item.editing { border: 2px dashed #d97706; background: #fffbeb; }
+.report-item .main-head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px dashed #e2e8f0; padding-bottom: 12px; margin-bottom: 16px; }
+.report-item .main-title { font-size: 18px; font-weight: 700; color: #0f172a; }
+.report-item .meta { font-size: 13px; color: #64748b; margin-top: 4px; }
+.render-sub-item { border-bottom: 1px solid #f1f5f9; padding-bottom: 14px; margin-bottom: 14px; }
+.render-sub-item:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+.render-sub-item .sub-num { font-size: 13px; font-weight: 700; color: #64748b; margin-bottom: 8px; }
+.zoomable-img { width: 100%; border-radius: 8px; max-height: 280px; object-fit: contain; cursor: zoom-in; transition: transform 0.2s; }
+.zoomable-img:hover { transform: scale(1.02); }
+.render-sub-item .ba-pair { text-align: center; background: #f8fafc; padding: 8px; border-radius: 8px; }
+.render-sub-item .ba-pair .lbl { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+.render-sub-item .desc-text { margin-top: 10px; font-size: 14px; white-space: pre-wrap; color: #334155; background: #f8fafc; padding: 10px; border-radius: 8px; border-left: 3px solid #cbd5e1; }
+.empty { text-align: center; color: #94a3b8; padding: 30px; font-size: 13px;}
+
+/* ── LIGHTBOX ZOOM MODAL STYLES ── */
+.lightbox-modal { display: none; position: fixed; z-index: 99999; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(15, 23, 42, 0.95); justify-content: center; align-items: center; cursor: zoom-out; }
+.lightbox-modal img { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); transform: scale(0.95); transition: transform 0.2s ease-in-out; }
+.lightbox-modal.open img { transform: scale(1); }
+.lightbox-close { position: absolute; top: 20px; right: 25px; color: #fff; font-size: 40px; font-weight: bold; cursor: pointer; user-select: none; line-height: 1; }
+
 @media(max-width:768px){
   #sidebar{transform:translateX(-100%)}
   #sidebar.open{transform:translateX(0);display:flex}
@@ -121,6 +154,30 @@ tr:hover td{background:#fafafa}
   #content{padding:12px}
   .form-grid{grid-template-columns:1fr}
   .stats-grid{grid-template-columns:1fr 1fr}
+}
+
+/* ── SCREEN PRINT OPTIMIZATION (HANYA UNTUK LAPORAN B/A) ── */
+@media print {
+  @page { size: A4 portrait; margin: 15mm; }
+  body { background: #fff !important; color: #000 !important; font-size: 12pt; }
+  #sidebar, #topbar, #login-container, #btn-hamburger, #sidebar-overlay, .no-print { display: none !important; }
+  body.logged-in #main { margin-left: 0 !important; }
+  #content { padding: 0 !important; }
+  .page { display: none !important; }
+  #page-laporanba { display: block !important; }
+
+  #ba-reportList { display: block !important; }
+  .report-item { border: 1px solid #94a3b8 !important; box-shadow: none !important; padding: 10mm !important; margin-bottom: 15mm !important; page-break-inside: avoid; background: #fff !important; border-radius: 8px !important; }
+  .report-item .main-head { border-bottom: 1.5pt solid #000 !important; padding-bottom: 5mm !important; margin-bottom: 6mm !important; }
+  .report-item .main-title { font-size: 16pt !important; color: #000 !important; }
+  .report-item .meta { font-size: 10pt !important; color: #334155 !important; }
+  .render-sub-item { page-break-inside: avoid; border-bottom: 1px solid #cbd5e1 !important; padding-bottom: 8mm !important; margin-bottom: 8mm !important; }
+  .render-sub-item:last-child { border-bottom: none !important; padding-bottom: 0 !important; margin-bottom: 0 !important; }
+  .render-sub-item .sub-num { font-size: 10pt !important; color: #000 !important; }
+  .ba-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10mm !important; margin-bottom: 5mm !important; }
+  .render-sub-item .ba-pair { background: #f8fafc !important; border: 1px solid #e2e8f0 !important; padding: 3mm !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .render-sub-item .ba-grid img { max-height: 75mm !important; object-fit: contain !important; width: 100% !important; cursor: default !important; transform: none !important; }
+  .render-sub-item .desc-text { font-size: 10pt !important; background: #f8fafc !important; border-left: 4px solid #94a3b8 !important; padding: 3mm !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 </style>
 </head>
@@ -178,6 +235,7 @@ tr:hover td{background:#fafafa}
   <div class="nav-item m-validasi" onclick="goto('validasi')"><span class="nav-icon">✅</span>Validasi SM</div>
   <div class="nav-item m-rekap" onclick="goto('rekap')"><span class="nav-icon">🖨️</span>Rekap &amp; Print</div>
   <div class="nav-item m-pr" onclick="goto('pr')"><span class="nav-icon">🛒</span>Purchase Req.</div>
+  <div class="nav-item m-laporanba" onclick="goto('laporanba')"><span class="nav-icon">📸</span>Laporan B/A</div>
   
   <div class="nav-section m-master-head">Master Data</div>
   <div class="nav-item m-pekerja" onclick="goto('pekerja')"><span class="nav-icon">👷</span>Pekerja</div>
@@ -200,8 +258,8 @@ tr:hover td{background:#fafafa}
     
     <div style="display:flex; align-items:center; gap:8px">
       <span class="user-badge-profile" id="user-profile-tag">👤 - (-)</span>
-      <button class="btn btn-sm btn-danger" onclick="triggerLogout()" style="padding:4px 8px; font-size:11px">🚪 Keluar</button>
-      <span class="conn-badge conn-load" id="conn-badge">⏳ Menghubungkan...</span>
+      <button class="btn btn-sm btn-danger no-print" onclick="triggerLogout()" style="padding:4px 8px; font-size:11px">🚪 Keluar</button>
+      <span class="conn-badge conn-load no-print" id="conn-badge">⏳ Menghubungkan...</span>
     </div>
     <span id="topbar-date" style="font-size:11px;color:#888;white-space:nowrap;margin-left:5px"></span>
   </div>
@@ -316,6 +374,52 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
+    <div class="page" id="page-laporanba">
+      <div class="card no-print" id="ba-formCard">
+        <div class="card-title" id="ba-formTitle">📝 Tambah Laporan B/A Baru</div>
+        
+        <div class="form-grid mb-12">
+          <div class="fg full">
+            <label>Judul Pekerjaan</label>
+            <input id="ba-title" placeholder="Contoh: Perbaikan Kebocoran & Pengecatan Ulang Gedung B">
+          </div>
+          <div class="fg">
+            <label>Lokasi / Area</label>
+            <input id="ba-location" placeholder="Contoh: Gedung B, Lantai 2-3">
+          </div>
+          <div class="fg">
+            <label>Tanggal Pekerjaan</label>
+            <input type="date" id="ba-date">
+          </div>
+          <div class="fg full">
+            <label>Petugas / Pelaksana</label>
+            <input id="ba-officer" placeholder="Nama tim / pelaksana">
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; margin-bottom: 12px; border-top: 1px dashed #e2e8f0; padding-top: 16px;">
+          <label style="font-size:14px; font-weight:700; color:#0f172a; margin-bottom: 0;">📸 Dokumentasi Foto & Deskripsi Pekerjaan</label>
+          <button class="btn btn-outline btn-sm" onclick="baAddItemBox()">+ Tambah Baris Foto/Deskripsi</button>
+        </div>
+        
+        <div id="ba-dynamicItemsContainer"></div>
+
+        <div class="flex gap-8 mt-16" style="border-top: 2px solid #f1f5f9; padding-top: 16px;">
+          <button id="ba-btnSubmit" class="btn btn-primary" onclick="baSubmitReport()">💾 Simpan Laporan</button>
+          <button class="btn btn-ghost" onclick="baResetForm()">Bersihkan Form</button>
+        </div>
+      </div>
+
+      <div class="card no-print" style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="card-title" style="margin:0;">📋 Daftar Laporan Terbit (<span id="ba-count">0</span>)</div>
+        <div class="flex gap-8" style="margin:0;">
+          <button class="btn btn-green btn-sm" onclick="window.print()">🖨️ Cetak / PDF</button>
+          <button class="btn btn-danger btn-sm" onclick="baClearAll()">Hapus Semua</button>
+        </div>
+      </div>
+
+      <div id="ba-reportList"></div>
+    </div>
     <div class="page" id="page-pekerja">
       <div class="card">
         <div class="card-title">👷 Data Pekerja</div>
@@ -413,6 +517,11 @@ tr:hover td{background:#fafafa}
   </div>
 </div>
 
+<div id="lightbox" class="lightbox-modal no-print" onclick="baCloseZoom()">
+  <span class="lightbox-close">&times;</span>
+  <img id="lightboxImg" src="" alt="Zoomed Photo">
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════
 // GLOBAL APPLICATION DATA CONFIG
@@ -426,11 +535,12 @@ var DB = { proyek:[], mandor:[], pekerja:[], sm:[], absensi:[] };
 var editIds = { pekerja:'', mandor:'', sm:'', proyek:'' };
 
 var ROLE_PERMISSIONS = {
-  administrator: ['dash', 'absensi', 'validasi', 'rekap', 'pr', 'pekerja', 'mandor', 'sm', 'proyek', 'settings'],
+  // Tambahkan 'laporanba' pada role yang berhak mengakses (misal: admin dan SM)
+  administrator: ['dash', 'absensi', 'validasi', 'rekap', 'pr', 'laporanba', 'pekerja', 'mandor', 'sm', 'proyek', 'settings'],
   purchasing:    ['dash', 'pr', 'proyek'],
   finance:       ['dash', 'rekap', 'pr', 'proyek'],
   hrd:           ['dash', 'absensi', 'rekap', 'pekerja', 'mandor'],
-  'site manager':['dash', 'absensi', 'validasi', 'pr', 'proyek'],
+  'site manager':['dash', 'absensi', 'validasi', 'pr', 'laporanba', 'proyek'],
   warehouse:     ['dash', 'pr'],
   tamu:          ['dash']
 };
@@ -458,7 +568,6 @@ function refreshAllDropdowns() {
   if(prProyekSel) prProyekSel.innerHTML = '<option value="">— Pilih Project —</option>' + DB.proyek.map(function(p){ return '<option value="'+p.id+'">'+p.nama+'</option>'; }).join('');
 }
 
-// REVISI: AKOMODASI SINKRONISASI MULTI-MANDOR & MULTI-SM PADA INPUT ABSENSI
 function onAbProyekChange() {
   var pId = document.getElementById('ab-proyek').value;
   var mSel = document.getElementById('ab-mandor');
@@ -471,16 +580,11 @@ function onAbProyekChange() {
     return;
   }
   
-  // Ambil daftar mandor yang terasosiasi ke dalam proyek (karena proyek sekarang bertipe array/string terpisah koma)
   var projectMandorIds = String(pr.mandorId || '').split(',').map(function(id){ return id.trim(); }).filter(Boolean);
-  
-  // Tampilkan mandor yang relevan dengan proyek ini saja di form absensi
   var projectMandors = DB.mandor.filter(function(m){ return projectMandorIds.includes(m.id); });
   mSel.innerHTML = projectMandors.map(function(m){ return '<option value="'+m.id+'">'+m.nama+'</option>'; }).join('');
 
-  // Tampilkan semua pekerja di bawah naungan seluruh mandor yang terdaftar di proyek ini
   var filteredPekerja = DB.pekerja.filter(function(p) {
-    // Jika tipe data pekerja adalah Mandor, cek apakah dia mandor di proyek ini. Jika helper/tukang, dia berhak muncul.
     return p.jabatan === 'Mandor' ? projectMandorIds.includes(p.id) : true;
   });
 
@@ -489,14 +593,12 @@ function onAbProyekChange() {
     return;
   }
 
-  // Deteksi duplikasi nama pekerja
   var namaCounts = {};
   filteredPekerja.forEach(function(p) {
     var n = p.nama.trim().toLowerCase();
     namaCounts[n] = (namaCounts[n] || 0) + 1;
   });
 
-  // Render dropdown dengan opsi identifikasi duplikat pintar
   pkSel.innerHTML = '<option value="">— Pilih Personel Pekerja —</option>' + 
     filteredPekerja.map(function(p) {
       var isDuplicate = namaCounts[p.nama.trim().toLowerCase()] > 1;
@@ -596,6 +698,7 @@ function goto(page) {
   document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
   
   var pg = document.getElementById('page-' + page); if (pg) pg.classList.add('active');
+  var n = document.querySelector('.m-' + page); if(n) n.classList.add('active');
   document.getElementById('topbar-title').textContent = page.toUpperCase();
   closeSidebar();
   
@@ -608,6 +711,7 @@ function goto(page) {
   else if (page === 'mandor') renderMandor();
   else if (page === 'sm') renderSM();
   else if (page === 'proyek') renderProyek();
+  else if (page === 'laporanba') baRender(); // Init Laporan B/A
 }
 
 // ═══════════════════════════════════════════════════════
@@ -649,9 +753,9 @@ function loadAll(cb) {
 
 function setBadge(state) {
   var el = document.getElementById('conn-badge');
-  if (state==='ok')   { el.className='conn-badge conn-ok';  el.textContent='● Terhubung'; }
-  if (state==='err')  { el.className='conn-badge conn-err'; el.textContent='✕ Gagal'; }
-  if (state==='load') { el.className='conn-badge conn-load';el.textContent='⏳ Sinkron...'; }
+  if (state==='ok')   { el.className='conn-badge conn-ok no-print';  el.textContent='● Terhubung'; }
+  if (state==='err')  { el.className='conn-badge conn-err no-print'; el.textContent='✕ Gagal'; }
+  if (state==='load') { el.className='conn-badge conn-load no-print';el.textContent='⏳ Sinkron...'; }
 }
 
 function uid() { return '_' + Math.random().toString(36).substr(2, 9); }
@@ -915,12 +1019,10 @@ function hapusSM(id) {
 }
 function resetSM() { editIds.sm=''; ['sm-nama','sm-hp','sm-pin'].forEach(function(i){document.getElementById(i).value='';}); var s = document.getElementById('sm-proyek-select'); if(s) s.selectedIndex = -1; document.getElementById('btn-sm-simpan').textContent='💾 Simpan SM'; }
 
-// --- DATA MASTER PROYEK ---
 function renderProyek() {
   var el = document.getElementById('list-proyek'); if(!DB.proyek.length){ el.innerHTML='<div class="empty-state">Belum ada data proyek</div>'; return;}
   el.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Nama Proyek</th><th>Lokasi</th><th>Mandor PJ</th><th>SM PJ</th><th>Status</th><th>Aksi</th></tr></thead><tbody>' +
     DB.proyek.map(function(p){
-      // REVISI: Render kolektif nama Multi-Mandor & Multi-SM di tabel peninjauan proyek
       var arrMandorIds = String(p.mandorId || '').split(',').map(function(i){return i.trim();}).filter(Boolean);
       var namaMandors = arrMandorIds.map(function(id){ var m = DB.mandor.find(function(x){return x.id===id;}); return m ? m.nama : id; }).join(', ');
 
@@ -936,7 +1038,6 @@ function renderProyek() {
 function simpanProyek() {
   var nama = document.getElementById('pr-nama').value.trim(); if(!nama) return alert('Nama proyek wajib diisi!');
   
-  // REVISI: Koleksi nilai pilihan Multi-Mandor & Multi-SM
   var mandorSelect = document.getElementById('pr-mandor-select');
   var selectedMandors = Array.from(mandorSelect.selectedOptions).map(function(o){ return o.value; }).join(',');
 
@@ -969,12 +1070,10 @@ function editProyek(id) {
   document.getElementById('pr-lokasi').value = p.lokasi;
   document.getElementById('pr-status').value = p.status; 
 
-  // REVISI: Set status terpilih pada Multi-Select Mandor
   var mandorSelect = document.getElementById('pr-mandor-select');
   var arrMandorIds = String(p.mandorId || '').split(',').map(function(i){ return i.trim(); });
   Array.from(mandorSelect.options).forEach(function(opt) { opt.selected = arrMandorIds.includes(opt.value); });
 
-  // REVISI: Set status terpilih pada Multi-Select SM
   var smSelect = document.getElementById('pr-sm-select');
   var arrSmIds = String(p.smId || '').split(',').map(function(i){ return i.trim(); });
   Array.from(smSelect.options).forEach(function(opt) { opt.selected = arrSmIds.includes(opt.value); });
@@ -987,6 +1086,265 @@ function hapusProyek(id) {
   apiPost({action:'delete_proyek', id:id}, function(res){ if(res.ok){ DB.proyek=DB.proyek.filter(function(x){return x.id!==id;}); renderProyek(); refreshAllDropdowns(); } });
 }
 function resetProyek() { editIds.proyek=''; ['pr-nama','pr-lokasi'].forEach(function(i){document.getElementById(i).value='';}); document.getElementById('pr-mandor-select').selectedIndex=-1; document.getElementById('pr-sm-select').selectedIndex=-1; document.getElementById('btn-pr-simpan').textContent='💾 Simpan Proyek'; }
+
+
+// ═══════════════════════════════════════════════════════
+// MODUL LAPORAN BEFORE-AFTER (TERINTEGRASI)
+// ═══════════════════════════════════════════════════════
+var baReports = JSON.parse(localStorage.getItem('ba_multi_reports') || '[]');
+var baCurrentEditId = null;
+var baItemCounter = 0;
+
+function baAddItemBox(data = null) {
+  baItemCounter++;
+  var container = document.getElementById('ba-dynamicItemsContainer');
+  var idSuffix = baItemCounter;
+
+  var itemBox = document.createElement('div');
+  itemBox.className = 'item-box';
+  itemBox.id = `ba-itemBox_${idSuffix}`;
+  itemBox.dataset.beforeData = data ? data.before : '';
+  itemBox.dataset.afterData = data ? data.after : '';
+
+  itemBox.innerHTML = `
+    <div class="item-header">
+      <div class="item-num">📸 Item Dokumentasi #${idSuffix}</div>
+      <button class="btn btn-danger btn-sm" onclick="baRemoveItemBox(${idSuffix})">Hapus Baris Ini</button>
+    </div>
+    <div class="ba-grid">
+      <div class="photo-box">
+        <div class="tag before">SEBELUM (BEFORE)</div>
+        <input type="file" accept="image/*" id="ba-beforeFile_${idSuffix}" onchange="baHandleImageChange(this, 'ba-beforePreview_${idSuffix}', 'beforeData', ${idSuffix})" style="margin-bottom:8px;">
+        <img id="ba-beforePreview_${idSuffix}" alt="" class="${data && data.before ? 'show' : ''}" src="${data && data.before ? data.before : ''}">
+      </div>
+      <div class="photo-box">
+        <div class="tag after">SESUDAH (AFTER)</div>
+        <input type="file" accept="image/*" id="ba-afterFile_${idSuffix}" onchange="baHandleImageChange(this, 'ba-afterPreview_${idSuffix}', 'afterData', ${idSuffix})" style="margin-bottom:8px;">
+        <img id="ba-afterPreview_${idSuffix}" alt="" class="${data && data.after ? 'show' : ''}" src="${data && data.after ? data.after : ''}">
+      </div>
+    </div>
+    <label style="font-size:12px;font-weight:600;color:#555;">Keterangan / Deskripsi Pekerjaan Item Ini</label>
+    <textarea id="ba-desc_${idSuffix}" placeholder="Jelaskan detail tindakan pengerjaan pada item bagian ini...">${data ? data.desc : ''}</textarea>
+  `;
+  container.appendChild(itemBox);
+}
+
+function baRemoveItemBox(idSuffix) {
+  var boxes = document.querySelectorAll('#ba-dynamicItemsContainer .item-box');
+  if (boxes.length <= 1) {
+    alert('Minimal harus ada 1 item dokumentasi foto/deskripsi.');
+    return;
+  }
+  var target = document.getElementById(`ba-itemBox_${idSuffix}`);
+  if (target) target.remove();
+}
+
+function baHandleImageChange(input, previewId, datasetKey, idSuffix) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var base64Data = e.target.result;
+    var img = document.getElementById(previewId);
+    img.src = base64Data;
+    img.classList.add('show');
+    document.getElementById(`ba-itemBox_${idSuffix}`).dataset[datasetKey] = base64Data;
+  };
+  reader.readAsDataURL(file);
+}
+
+function baSave() { localStorage.setItem('ba_multi_reports', JSON.stringify(baReports)); }
+
+function baSubmitReport() {
+  var title = document.getElementById('ba-title').value.trim();
+  if (!title) { alert('Judul pekerjaan utama wajib diisi.'); return; }
+
+  var itemBoxes = document.querySelectorAll('#ba-dynamicItemsContainer .item-box');
+  var itemsData = [];
+  var hasPhotoCheck = true;
+
+  itemBoxes.forEach(function(box) {
+    var before = box.dataset.beforeData || '';
+    var after = box.dataset.afterData || '';
+    var desc = box.querySelector('textarea').value.trim();
+
+    if (!before || !after) {
+      hasPhotoCheck = false;
+    }
+    itemsData.push({ before: before, after: after, desc: desc });
+  });
+
+  if (!hasPhotoCheck) {
+    if (!confirm('Ada beberapa foto Before/After yang masih kosong di baris item Anda. Tetap simpan laporan?')) return;
+  }
+
+  if (baCurrentEditId) {
+    var idx = baReports.findIndex(function(r){ return r.id === baCurrentEditId; });
+    if (idx !== -1) {
+      baReports[idx].title = title;
+      baReports[idx].location = document.getElementById('ba-location').value.trim();
+      baReports[idx].date = document.getElementById('ba-date').value;
+      baReports[idx].officer = document.getElementById('ba-officer').value.trim();
+      baReports[idx].items = itemsData;
+    }
+    baCurrentEditId = null;
+  } else {
+    baReports.unshift({
+      id: Date.now(),
+      title: title,
+      location: document.getElementById('ba-location').value.trim(),
+      date: document.getElementById('ba-date').value,
+      officer: document.getElementById('ba-officer').value.trim(),
+      items: itemsData
+    });
+  }
+
+  baSave();
+  baRender();
+  baResetForm();
+}
+
+function baEditReport(id) {
+  var report = baReports.find(function(r){ return r.id === id; });
+  if (!report) return;
+
+  baCurrentEditId = id;
+  
+  document.getElementById('ba-formTitle').textContent = "📝 Edit Laporan Pekerjaan (Multi-Foto)";
+  var btn = document.getElementById('ba-btnSubmit');
+  btn.textContent = "💾 Perbarui & Simpan Laporan";
+  btn.className = "btn btn-green";
+
+  document.getElementById('ba-title').value = report.title;
+  document.getElementById('ba-location').value = report.location;
+  document.getElementById('ba-date').value = report.date;
+  document.getElementById('ba-officer').value = report.officer;
+  
+  document.getElementById('ba-dynamicItemsContainer').innerHTML = '';
+  baItemCounter = 0;
+  
+  report.items.forEach(function(item) {
+    baAddItemBox(item);
+  });
+
+  document.getElementById('ba-formCard').scrollIntoView({ behavior: 'smooth' });
+  baRender();
+}
+
+function baResetForm() {
+  baCurrentEditId = null;
+  document.getElementById('ba-formTitle').textContent = "📝 Tambah Laporan B/A Baru";
+  var btn = document.getElementById('ba-btnSubmit');
+  btn.textContent = "💾 Simpan Laporan";
+  btn.className = "btn btn-primary";
+
+  ['ba-title','ba-location','ba-officer'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('ba-date').valueAsDate = new Date();
+  
+  document.getElementById('ba-dynamicItemsContainer').innerHTML = '';
+  baItemCounter = 0;
+  baAddItemBox();
+  baRender();
+}
+
+function baDeleteReport(id) {
+  if (baCurrentEditId === id) {
+    alert('Laporan sedang dibuka di form edit. Selesaikan atau reset form dahulu.');
+    return;
+  }
+  if (!confirm('Hapus laporan utuh ini beserta seluruh fotonya?')) return;
+  baReports = baReports.filter(function(r){ return r.id !== id; });
+  baSave();
+  baRender();
+}
+
+function baClearAll() {
+  if (!baReports.length) return;
+  if (!confirm('Hapus SEMUA daftar laporan? Tindakan ini permanen.')) return;
+  baReports = [];
+  baCurrentEditId = null;
+  baSave();
+  baRender();
+  baResetForm();
+}
+
+function baOpenZoom(src) {
+  var modal = document.getElementById('lightbox');
+  var modalImg = document.getElementById('lightboxImg');
+  if (!modal || !modalImg) return;
+  
+  modalImg.src = src;
+  modal.style.display = "flex";
+  setTimeout(function() {
+    modal.classList.add('open');
+  }, 20);
+}
+
+function baCloseZoom(e) {
+  var modal = document.getElementById('lightbox');
+  if (!modal) return;
+  
+  modal.classList.remove('open');
+  setTimeout(function() {
+    modal.style.display = "none";
+  }, 150);
+}
+
+function baEsc(s) {
+  return (s || '').replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; });
+}
+
+function baRender() {
+  var list = document.getElementById('ba-reportList');
+  if(!list) return;
+
+  document.getElementById('ba-count').textContent = baReports.length;
+  if (!baReports.length) {
+    list.innerHTML = '<div class="card empty no-print">Belum ada laporan terbit. Buat laporan baru melalui form di atas.</div>';
+    return;
+  }
+
+  list.innerHTML = baReports.map(function(r) {
+    var renderedItemsHTML = r.items.map(function(item, index) {
+      return `
+      <div class="render-sub-item">
+        <div class="sub-num">Dokumentasi Bagian #${index + 1}</div>
+        <div class="ba-grid">
+          <div class="ba-pair">
+            <div class="lbl" style="color:#dc2626;">BEFORE</div>
+            ${item.before ? `<img src="${item.before}" class="zoomable-img" onclick="baOpenZoom(this.src)" title="Klik untuk memperbesar">` : '<div class="empty">Tidak ada foto</div>'}
+          </div>
+          <div class="ba-pair">
+            <div class="lbl" style="color:#16a34a;">AFTER</div>
+            ${item.after ? `<img src="${item.after}" class="zoomable-img" onclick="baOpenZoom(this.src)" title="Klik untuk memperbesar">` : '<div class="empty">Tidak ada foto</div>'}
+          </div>
+        </div>
+        ${item.desc ? `<div class="desc-text"><strong>Keterangan Item:</strong>\n${baEsc(item.desc)}</div>` : ''}
+      </div>
+    `}).join('');
+
+    return `
+      <div class="report-item ${r.id === baCurrentEditId ? 'editing' : ''}">
+        <div class="main-head">
+          <div>
+            <div class="main-title">${baEsc(r.title)} ${r.id === baCurrentEditId ? '<span style="color:#d97706; font-size:12px;" class="no-print">(Sedang Diedit)</span>' : ''}</div>
+            <div class="meta">
+              📍 Area: <strong>${baEsc(r.location) || '-'}</strong> &nbsp;•&nbsp; 📅 Tanggal: <strong>${fmtTgl(r.date)}</strong> &nbsp;•&nbsp; 👷 Pelaksana: <strong>${baEsc(r.officer) || '-'}</strong>
+            </div>
+          </div>
+          <div class="head-actions no-print flex gap-8">
+            <button class="btn btn-outline btn-sm" onclick="baEditReport(${r.id})">✏️ Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="baDeleteReport(${r.id})">🗑 Hapus</button>
+          </div>
+        </div>
+        
+        <div class="items-display-area">
+          ${renderedItemsHTML}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
 
 
 // ═══════════════════════════════════════════════════════
@@ -1020,6 +1378,10 @@ window.onload = function() {
     goto('settings'); showAlert('alert-settings', 'info', 'Hubungkan URL Google Apps Script Anda untuk mengaktifkan database.');
   }
 };
+
+window.addEventListener('DOMContentLoaded', () => {
+    baResetForm();
+});
 </script>
 </body>
 </html>
