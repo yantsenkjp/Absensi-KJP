@@ -503,7 +503,7 @@ function simpanSetup(){
 
 function muatMaster(){
   setStatus('Memuat data dari Google Sheets...','info');
-  apiGet({action:'get_master'},function(res){
+  apiGet({action:'get_all'},function(res){      // <--- UBAH MENJADI 'get_all'
     document.getElementById('btn-setup').disabled=false;
     document.getElementById('btn-setup').textContent='Simpan & Muat Data';
     if(!res.ok){
