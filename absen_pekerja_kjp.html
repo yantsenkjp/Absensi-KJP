@@ -322,7 +322,7 @@ select{
 'use strict';
 
 var LS_URL    = 'kjp_gsurl_pk';
-var GS_URL    = 'https://script.google.com/macros/s/AKfycbyh9nywQZ445Hl2f1bz-rXFturRikeaBRZWr12ntSM1j2N0M-iXToLsIYlOpUr_9SBt/exec';
+var GS_URL    = 'https://script.google.com/macros/s/AKfycbxcMMmbrxv7CHbD3F0SaW-uaIYZ0GIm8zJLXUothZEXWPGYwPGYhsQrDybIEqClUM9T/exec';
 var MASTER    = {proyek:[], mandor:[], pekerja:[]};
 var RIWAYAT   = [];
 var mediaFiles= [];
@@ -470,8 +470,9 @@ function init(){
   document.getElementById('hdr-date').innerHTML=
     HARI[now.getDay()]+'<br>'+now.getDate()+' '+BLN[now.getMonth()]+' '+now.getFullYear();
 
-  // Event Listener tetap dibiarkan
-  document.getElementById('btn-setup').addEventListener('click',simpanSetup);
+  // Memastikan UI setup disembunyikan secara paksa
+  document.getElementById('setup-panel').style.display = 'none';
+
   document.getElementById('btn-add-lap').addEventListener('click',tambahLap);
   document.getElementById('btn-simpan-laporan').addEventListener('click',simpanLaporan);
   document.getElementById('upload-tap').addEventListener('click',function(){document.getElementById('f-files').click();});
@@ -486,10 +487,31 @@ function init(){
   document.getElementById('hist-pk').addEventListener('change',renderRiwayat);
   document.getElementById('foto-absensi-sel').addEventListener('change',onFotoAbsensiChange);
 
-  // Langsung eksekusi pemanggilan database otomatis!
+  // Langsung eksekusi pemanggilan database!
   muatMaster(); 
 }
 
+// ── Modifikasi sedikit muatMaster agar tidak memunculkan panel setup jika gagal ──
+function muatMaster(){
+  setStatus('Memuat data dari Google Sheets...','info');
+  apiGet({action:'get_all'},function(res){
+    if(!res.ok){
+      setStatus('Gagal: '+res.error,'err'); 
+      alert('Koneksi gagal. Pastikan link Apps Script sudah benar dan aksesnya "Anyone".');
+      return;
+    }
+    MASTER.proyek =(res.data.proyek ||[]).map(function(r){Object.keys(r).forEach(function(k){if(r[k] instanceof Date)r[k]=normTgl(r[k]);else if(r[k]===null||r[k]===undefined)r[k]='';});return r;});
+    MASTER.mandor =(res.data.mandor ||[]).map(function(r){Object.keys(r).forEach(function(k){if(r[k] instanceof Date)r[k]=normTgl(r[k]);else if(r[k]===null||r[k]===undefined)r[k]='';});return r;});
+    MASTER.pekerja=(res.data.pekerja||[]).map(function(r){Object.keys(r).forEach(function(k){if(r[k] instanceof Date)r[k]=normTgl(r[k]);else if(r[k]===null||r[k]===undefined)r[k]='';});return r;});
+
+    var aktif=MASTER.proyek.filter(function(p){return String(p.status).toLowerCase()==='aktif';});
+    setStatus('✅ Terhubung — '+MASTER.pekerja.length+' pekerja, '+aktif.length+' proyek','ok');
+    
+    muatRiwayatSilent(function(){
+      tampilkanForm();
+    });
+  });
+}
 function simpanSetup(){
   var url=getVal('setup-url').split('?')[0];
   if(!url||!url.startsWith('http')){ showAlert('alert-setup','URL tidak valid. Harus dimulai dengan https://','err'); return; }
