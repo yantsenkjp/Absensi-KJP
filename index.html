@@ -120,12 +120,12 @@ tr:hover td{background:#fafafa}
 .ts-table td.text-left { text-align: left; white-space: normal; min-width: 120px; }
 .ts-table td.num-right { text-align: right; }
 
-/* Sel Diagonal untuk Hari/Lembur (DIBALIK: \ to bottom right) */
+/* Sel Diagonal untuk Hari/Lembur (Kiri Atas & Kanan Bawah) */
 .split-cell { position: relative; width: 32px; height: 36px; padding: 0 !important; }
 .split-cell.empty { background: linear-gradient(to bottom right, transparent 48%, #000 49%, #000 51%, transparent 52%); }
 .split-cell.filled { background: linear-gradient(to bottom right, transparent 49%, #ddd 50%, transparent 51%); }
-.split-cell .top-val { position: absolute; top: 2px; right: 4px; font-weight: bold; font-size: 10px; }
-.split-cell .bot-val { position: absolute; bottom: 2px; left: 4px; font-weight: bold; font-size: 10px; color: #C8102E; }
+.split-cell .top-val { position: absolute; top: 2px; left: 4px; font-weight: bold; font-size: 10px; }
+.split-cell .bot-val { position: absolute; bottom: 2px; right: 4px; font-weight: bold; font-size: 10px; color: #C8102E; }
 
 .print-only { display: none; }
 
@@ -256,7 +256,7 @@ tr:hover td{background:#fafafa}
         <div class="stat-card red"><div class="stat-label">Absensi Pending</div><div class="stat-value" id="s-pending">-</div></div>
         <div class="stat-card gold"><div class="stat-label">Total Pekerja</div><div class="stat-value" id="s-pekerja">-</div></div>
         <div class="stat-card green"><div class="stat-label">Proyek Aktif</div><div class="stat-value" id="s-proyek">-</div></div>
-        <div class="stat-card blue"><div class="stat-label">Absensi Minggu Ini</div><div class="stat-value" id="s-absensi">-</div></div>
+        <div class="stat-card blue"><div class="stat-label">Total Gaji + Lembur (Bulan Ini)</div><div class="stat-value" id="s-pengeluaran" style="font-size:18px">-</div></div>
       </div>
       <div class="card">
         <div class="card-title">📋 Laporan & Absensi Terbaru</div>
@@ -274,7 +274,7 @@ tr:hover td{background:#fafafa}
           <div class="fg"><label>Pekerja</label><select id="ab-pekerja" onchange="hitungDurasi()"><option value="">— Pilih Proyek Terlebih Dahulu —</option></select></div>
           <div class="fg"><label>Tanggal</label><input type="date" id="ab-tanggal" onchange="hitungDurasi()"></div>
           <div class="fg"><label>Jam Masuk</label><input type="time" id="ab-masuk" value="08:00" onchange="hitungDurasi()"></div>
-          <div class="fg"><label>Jam Pulang</label><input type="time" id="ab-pulang" value="17:00" onchange="hitungDurasi()"></div>
+          <div class="fg"><label>Jam Pulang</label><input type="time" id="ab-pulang" value="16:00" onchange="hitungDurasi()"></div>
           <div class="fg full"><div class="alert alert-info show" id="ab-kalk" style="margin-bottom:0"></div></div>
         </div>
         <div class="fg full mb-12" style="margin-top:10px"><label>Uraian Pekerjaan</label><textarea id="ab-deskripsi" placeholder="Contoh: Pemasangan bata merah lantai 2..."></textarea></div>
@@ -417,7 +417,7 @@ tr:hover td{background:#fafafa}
       <div class="fg"><label>Jam Masuk</label><input type="time" id="edit-ab-masuk" onchange="kalkulasiEditModal()"></div>
       <div class="fg"><label>Jam Pulang</label><input type="time" id="edit-ab-pulang" onchange="kalkulasiEditModal()"></div>
       <div class="fg full" style="margin-bottom:8px;">
-        <button class="btn btn-outline btn-sm" onclick="kalkulasiEditModal()" style="width:100%; justify-content:center;">🔄 Hitung Otomatis (Shift Malam/Lembur)</button>
+        <button class="btn btn-outline btn-sm" onclick="kalkulasiEditModal()" style="width:100%; justify-content:center;">🔄 Hitung Ulang Otomatis (Shift/Lembur)</button>
       </div>
       <div class="fg"><label>Hari Kerja (HK)</label><input type="number" step="0.5" id="edit-ab-hk"></div>
       <div class="fg"><label>Lembur (Jam)</label><input type="number" step="0.5" id="edit-ab-lembur"></div>
@@ -447,7 +447,8 @@ var ROLE_PERMISSIONS = {
   purchasing:    ['dash', 'pr', 'proyek'],
   finance:       ['dash', 'rekap', 'pr', 'proyek'],
   hrd:           ['dash', 'absensi', 'rekap', 'pekerja', 'mandor'],
-  'site manager':['dash', 'absensi', 'validasi', 'pr', 'proyek'],
+  // REVISI: Site Manager sekarang diberikan akses menuju menu 'rekap'
+  'site manager':['dash', 'absensi', 'validasi', 'rekap', 'pr', 'proyek'],
   warehouse:     ['dash', 'pr'],
   tamu:          ['dash']
 };
@@ -468,7 +469,6 @@ function fmtTgl(s) {
   } catch(e) { return s; }
 }
 
-// Konversi format Date aneh ("1899-12-30T00:02:24.000Z") menjadi jam "HH:MM"
 function extractTime(val) {
   if (!val) return '-';
   if (typeof val === 'string') {
@@ -655,15 +655,28 @@ function setBadge(state) {
 // ═══════════════════════════════════════════════════════
 function renderDashboard() {
   var pending = DB.absensi.filter(function(a){ return a.status==='pending'; }).length;
-  document.getElementById('s-pending').textContent = pending; document.getElementById('s-pekerja').textContent = DB.pekerja.length;
-  document.getElementById('s-proyek').textContent  = DB.proyek.length; document.getElementById('s-absensi').textContent = DB.absensi.length;
+  document.getElementById('s-pending').textContent = pending; 
+  document.getElementById('s-pekerja').textContent = DB.pekerja.length;
+  document.getElementById('s-proyek').textContent  = DB.proyek.length; 
+  
+  // REVISI: Kalkulasi Total Pengeluaran Bulan Ini
+  var totalPengeluaran = 0;
+  var currMonth = new Date().toISOString().substring(0,7); // "YYYY-MM"
+  DB.absensi.forEach(function(a){
+      var tgl = String(a.tanggal);
+      if (tgl.indexOf('T') > -1) tgl = tgl.split('T')[0];
+      if (a.status === 'approved' && tgl.startsWith(currMonth)) {
+          totalPengeluaran += Number(a.total) || 0;
+      }
+  });
+  document.getElementById('s-pengeluaran').textContent = rupiah(totalPengeluaran).replace(',00','');
+
   var html = '<div class="table-wrap"><table><thead><tr><th>Pekerja</th><th>Proyek</th><th>Tanggal</th><th>Jam</th><th>Uraian Laporan</th><th>Status</th><th class="no-print">Aksi</th></tr></thead><tbody>';
   var lastAbs = DB.absensi.slice(-10).reverse();
   if(lastAbs.length === 0) html += '<tr><td colspan="7" class="empty-state">Belum ada data absensi masuk.</td></tr>';
   else {
     lastAbs.forEach(function(a) {
       var p = DB.pekerja.find(function(x){ return x.id === a.pekerjaId; }) || {nama: '-'}; var pr = DB.proyek.find(function(x){ return x.id === a.proyekId; }) || {nama: '-'};
-      // Tampilkan jam masuk & pulang (termasuk fitur edit cepat di dashboard)
       html += '<tr><td><strong>'+p.nama+'</strong></td><td>'+pr.nama+'</td><td>'+fmtTgl(a.tanggal)+'</td>' +
         '<td>'+extractTime(a.masuk)+' - '+extractTime(a.pulang)+'</td>' +
         '<td>'+(a.deskripsi || '-')+'</td><td><span class="badge badge-'+a.status+'">'+a.status+'</span></td>' +
@@ -677,13 +690,13 @@ function initAbsensi() {
   document.getElementById('ab-tanggal').value = new Date().toISOString().split('T')[0]; refreshAllDropdowns(); document.getElementById('ab-pekerja').innerHTML = '<option value="">— Pilih Proyek Terlebih Dahulu —</option>'; hitungDurasi();
 }
 
-// LOGIKA KALKULASI LEMBUR (>16:00) & SHIFT MALAM
+// REVISI LOGIKA KALKULASI LEMBUR (>16:00) & SHIFT MALAM
 function hitungDurasi() {
   var m = document.getElementById('ab-masuk').value; var p = document.getElementById('ab-pulang').value;
   var el = document.getElementById('ab-kalk'); if(!m || !p) return;
   var min = toMnt(m); var pin = toMnt(p);
-  var isNightShift = pin < min; // Cek shift malam (contoh: masuk 20:00 pulang 04:00)
-  if (isNightShift) pin += 24 * 60; // Tambah durasi 1 hari penuh
+  var isNightShift = pin < min; // Shift malam (masuk malam, pulang subuh)
+  if (isNightShift) pin += 24 * 60; 
   
   var d = pin - min;
   if(d <= 0) { el.textContent = '⚠️ Jam tidak logis.'; return; }
@@ -691,11 +704,11 @@ function hitungDurasi() {
   var hk = d >= 480 ? 1 : (d >= 240 ? 0.5 : 0);
   var lj = 0;
   
-  // Jika shift reguler (bukan malam) & pulang melebihi 16:00
+  // Lembur reguler jika pulang lewat jam 16:00
   if (!isNightShift && pin > toMnt("16:00")) {
      lj = (pin - toMnt("16:00")) / 60;
   } else {
-     // Jika shift malam, pakai sistem lembur otomatis di atas 8 jam (480 mnt)
+     // Lembur shift otomatis di atas 8 jam
      lj = Math.max(0, (d - 480) / 60);
   }
 
@@ -731,7 +744,6 @@ function renderValidasiList() {
   pending.forEach(function(a) {
     var p = DB.pekerja.find(function(x){ return x.id === a.pekerjaId; }) || {nama:'-'}; var pr = DB.proyek.find(function(x){ return x.id === a.proyekId; }) || {nama:'-'};
     
-    // REVISI: Tampilkan detail tanggal dan jam input dari form absensi pekerja dengan ekstrak jam murni
     html += '<tr><td><strong>'+p.nama+'</strong></td><td>'+pr.nama+'</td>' +
       '<td>📅 '+fmtTgl(a.tanggal)+'<br>⏰ '+extractTime(a.masuk)+' - '+extractTime(a.pulang)+'<br><small style="color:#C8102E;font-weight:700;">'+a.hariKerja+' HK | Lembur '+a.lemburJam+'j</small></td>' +
       '<td>'+(a.deskripsi||'-')+'</td>' +
@@ -813,7 +825,7 @@ function simpanEditAbsensi() {
   
   apiPost({action: 'update_absensi', row: a}, function(res) {
     if(res && res.ok) { 
-      // Refresh page aktif saja
+      // Auto Refresh Halaman Aktif Saja
       if (document.getElementById('page-dashboard').classList.contains('active')) renderDashboard();
       if (document.getElementById('page-validasi').classList.contains('active')) renderValidasiList();
       if (document.getElementById('page-rekap').classList.contains('active')) tampilkanRekap();
@@ -859,7 +871,7 @@ function tampilkanRekap() {
   var mId = document.getElementById('rek-mandor').value;
   var dariStr = document.getElementById('rek-dari').value; 
   var sampaiStr = document.getElementById('rek-sampai').value;
-  var transferMode = document.getElementById('rek-transfer').value; // Pekerja / Mandor
+  var transferMode = document.getElementById('rek-transfer').value; 
   var container = document.getElementById('rekap-result'); 
 
   if (!dariStr || !sampaiStr) {
@@ -982,7 +994,7 @@ function tampilkanRekap() {
     var trSumHk = 0;
     var trSumLj = 0;
     var jamMasuk = '08:00';
-    var jamPulang = '17:00';
+    var jamPulang = '16:00';
     var descArr = [];
 
     // Proses data harian
@@ -999,7 +1011,7 @@ function tampilkanRekap() {
         
         if(a.deskripsi) descArr.push(a.deskripsi);
         
-        // CSS Sel Terbelah Diagonal untuk Hari(Kanan Atas) dan Lembur(Kiri Bawah)
+        // CSS Sel Terbelah Diagonal untuk HK(Kiri Atas) dan Lembur(Kanan Bawah)
         return '<td class="split-cell filled"><div class="top-val">'+hk+'</div>'+ (lj>0 ? '<div class="bot-val">'+lj+'</div>' : '') +'</td>';
       } else {
         // Coret miring kosong
