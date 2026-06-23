@@ -70,6 +70,7 @@ input,select,textarea{width:100%;padding:9px 12px;border:1.5px solid #e0e0e0;bor
 input:focus,select:focus,textarea:focus{border-color:#C8102E}
 textarea{resize:vertical;min-height:72px;font-size:13px}
 select{cursor:pointer}
+optgroup { font-weight: 700; color: #C8102E; background: #fff8f8; }
 input[readonly]{background:#f5f5f5;color:#888}
 .flex{display:flex} .gap-8{gap:8px} .mb-12{margin-bottom:12px} .mb-16{margin-bottom:16px} .mt-16{margin-top:16px;}
 
@@ -241,10 +242,12 @@ tr:hover td{background:#fafafa}
         <div class="alert" id="alert-settings"></div>
         <div id="saved-url-info" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#166534">
           ✅ URL tersimpan: <strong id="saved-url-text" style="font-size:11px;word-break:break-all"></strong>
-          <button onclick="hapusSimpanUrl()" class="btn btn-sm btn-danger" style="margin-left:8px;padding:2px 8px">Hapus</button>
         </div>
-        <div class="fg mb-12"><label>URL Google Apps Script</label><input type="url" id="gs-url-input" placeholder="https://script.google.com/macros/s/.../exec"></div>
-        <div class="flex gap-8 mb-12"><button class="btn btn-primary" onclick="simpanUrl()">💾 Simpan &amp; Hubungkan</button><button class="btn btn-outline" onclick="testKoneksi()">🔗 Test Koneksi</button></div>
+        <div class="fg mb-12"><label>URL Google Apps Script</label>
+        <input type="url" id="gs-url-input" value="https://script.google.com/macros/s/AKfycbyh9nywQZ445Hl2f1bz-rXFturRikeaBRZWr12ntSM1j2N0M-iXToLsIYlOpUr_9SBt/exec" readonly style="background:#f5f5f5; color:#666;">
+        <small style="color:#888;">URL sudah ditanamkan permanen di dalam sistem.</small>
+        </div>
+        <div class="flex gap-8 mb-12"><button class="btn btn-outline" onclick="testKoneksi()">🔗 Test Koneksi</button></div>
       </div>
     </div>
 
@@ -267,7 +270,7 @@ tr:hover td{background:#fafafa}
         <div class="alert" id="alert-absensi"></div>
         <div class="form-grid">
           <div class="fg"><label>Proyek</label><select id="ab-proyek" onchange="onAbProyekChange()"></select></div>
-          <div class="fg"><label>Mandor Lapangan</label><select id="ab-mandor"></select></div>
+          <div class="fg"><label>Mandor Lapangan</label><select id="ab-mandor" onchange="onAbMandorChange()"></select></div>
           <div class="fg"><label>Pekerja</label><select id="ab-pekerja" onchange="hitungDurasi()"><option value="">— Pilih Proyek Terlebih Dahulu —</option></select></div>
           <div class="fg"><label>Tanggal</label><input type="date" id="ab-tanggal" onchange="hitungDurasi()"></div>
           <div class="fg"><label>Jam Masuk</label><input type="time" id="ab-masuk" value="08:00" onchange="hitungDurasi()"></div>
@@ -433,7 +436,7 @@ tr:hover td{background:#fafafa}
 // ═══════════════════════════════════════════════════════
 var LS_URL = 'kjp_gsurl';
 var LS_USER = 'kjp_logged_user';
-var GS_URL = '';
+var GS_URL = 'https://script.google.com/macros/s/AKfycbyh9nywQZ445Hl2f1bz-rXFturRikeaBRZWr12ntSM1j2N0M-iXToLsIYlOpUr_9SBt/exec';
 var CURRENT_USER = null;
 
 var DB = { proyek:[], mandor:[], pekerja:[], sm:[], absensi:[] };
@@ -522,21 +525,110 @@ function onAbProyekChange() {
   var pkSel = document.getElementById('ab-pekerja');
   
   var pr = DB.proyek.find(function(x){ return x.id === pId; });
-  if(!pr) { mSel.innerHTML = '<option value="">— Pilih Mandor Lapangan —</option>'; pkSel.innerHTML = '<option value="">— Pilih Proyek Terlebih Dahulu —</option>'; return; }
+  if(!pr) { 
+    mSel.innerHTML = '<option value="">— Pilih Mandor Lapangan —</option>'; 
+    pkSel.innerHTML = '<option value="">— Pilih Proyek Terlebih Dahulu —</option>'; 
+    return; 
+  }
   
   var projectMandorIds = String(pr.mandorId || '').split(',').map(function(id){ return id.trim(); }).filter(Boolean);
   var projectMandors = DB.mandor.filter(function(m){ return projectMandorIds.includes(m.id); });
-  mSel.innerHTML = projectMandors.map(function(m){ return '<option value="'+m.id+'">'+m.nama+'</option>'; }).join('');
+  
+  mSel.innerHTML = '<option value="">— Pilih Mandor Lapangan —</option>' + projectMandors.map(function(m){ return '<option value="'+m.id+'">'+m.nama+'</option>'; }).join('');
+  if(projectMandors.length === 1) {
+     mSel.value = projectMandors[0].id;
+  }
+  
+  onAbMandorChange();
+}
 
-  var filteredPekerja = DB.pekerja.filter(function(p) { return p.jabatan === 'Mandor' ? projectMandorIds.includes(p.id) : true; });
-  if(filteredPekerja.length === 0) { pkSel.innerHTML = '<option value="">— Tidak ada pekerja di proyek ini —</option>'; return; }
+// ── SMART GROUPING: FILTER PEKERJA BERDASARKAN MANDOR (KHUSUS ADMIN INPUT) ──
+function onAbMandorChange() {
+  var pId = document.getElementById('ab-proyek').value;
+  var mId = document.getElementById('ab-mandor').value;
+  var pkSel = document.getElementById('ab-pekerja');
+  var currentPk = pkSel.value;
+  
+  var pr = DB.proyek.find(function(x){ return x.id === pId; });
+  if (!pr) { 
+    pkSel.innerHTML = '<option value="">— Pilih Proyek Terlebih Dahulu —</option>'; 
+    return; 
+  }
 
-  var namaCounts = {}; filteredPekerja.forEach(function(p) { var n = p.nama.trim().toLowerCase(); namaCounts[n] = (namaCounts[n] || 0) + 1; });
-  pkSel.innerHTML = '<option value="">— Pilih Personel Pekerja —</option>' + 
-    filteredPekerja.map(function(p) {
-      var labelPembeda = p.nama + (namaCounts[p.nama.trim().toLowerCase()] > 1 ? ' (' + p.jabatan + ' - *' + (p.hp?p.hp.substr(-4):'❌HP') + ')' : ' (' + p.jabatan + ')');
-      return '<option value="'+p.id+'">'+labelPembeda+'</option>';
+  var projectMandorIds = String(pr.mandorId || '').split(',').map(function(id){ return id.trim(); }).filter(Boolean);
+
+  var filteredPekerja = DB.pekerja.filter(function(p) { 
+    return p.jabatan === 'Mandor' ? projectMandorIds.includes(p.id) : true; 
+  });
+
+  if (filteredPekerja.length === 0) { 
+    pkSel.innerHTML = '<option value="">— Tidak ada pekerja di proyek ini —</option>'; 
+    return; 
+  }
+
+  var namaCounts = {}; 
+  filteredPekerja.forEach(function(p) { var n = p.nama.trim().toLowerCase(); namaCounts[n] = (namaCounts[n] || 0) + 1; });
+
+  if (!mId) {
+    var sortedAll = filteredPekerja.slice().sort(function(a,b){ return a.nama.localeCompare(b.nama); });
+    pkSel.innerHTML = '<option value="">— Pilih Mandor Terlebih Dahulu —</option>' + 
+      sortedAll.map(function(p) {
+        var label = p.nama + (namaCounts[p.nama.trim().toLowerCase()] > 1 ? ' (' + p.jabatan + ' - *' + (p.hp?p.hp.substr(-4):'❌HP') + ')' : ' (' + p.jabatan + ')');
+        return '<option value="'+p.id+'">'+label+'</option>';
+      }).join('');
+    pkSel.value = currentPk;
+    hitungDurasi();
+    return;
+  }
+
+  // Pengelompokan cerdas berdasarkan histori
+  var historyPekerjaIds = {};
+  DB.absensi.forEach(function(r) {
+    if (String(r.mandorId) === String(mId)) {
+      historyPekerjaIds[r.pekerjaId] = true;
+    }
+  });
+
+  var pekerjaTerkait = [];
+  var pekerjaLain = [];
+  var mandorObj = DB.mandor.find(function(m){ return m.id === mId; });
+  var namaMandor = mandorObj ? mandorObj.nama.toLowerCase() : '';
+
+  filteredPekerja.forEach(function(p) {
+    var isThisMandor = (p.jabatan === 'Mandor' && p.nama.toLowerCase() === namaMandor);
+    if (historyPekerjaIds[p.id] || isThisMandor) {
+      pekerjaTerkait.push(p);
+    } else {
+      pekerjaLain.push(p);
+    }
+  });
+
+  pekerjaTerkait.sort(function(a,b){ return a.nama.localeCompare(b.nama); });
+  pekerjaLain.sort(function(a,b){ return a.nama.localeCompare(b.nama); });
+
+  var html = '<option value="">— Pilih Nama Pekerja —</option>';
+
+  if (pekerjaTerkait.length > 0) {
+    html += '<optgroup label="📌 Tim Mandor Ini (Sering Bersama)">';
+    html += pekerjaTerkait.map(function(p){
+      var label = p.nama + (namaCounts[p.nama.trim().toLowerCase()] > 1 ? ' (' + p.jabatan + ' - *' + (p.hp?p.hp.substr(-4):'❌HP') + ')' : ' (' + p.jabatan + ')');
+      return'<option value="'+p.id+'">'+label+'</option>';
     }).join('');
+    html += '</optgroup>';
+  }
+
+  if (pekerjaLain.length > 0) {
+    html += '<optgroup label="👥 Pekerja Lainnya">';
+    html += pekerjaLain.map(function(p){
+      var label = p.nama + (namaCounts[p.nama.trim().toLowerCase()] > 1 ? ' (' + p.jabatan + ' - *' + (p.hp?p.hp.substr(-4):'❌HP') + ')' : ' (' + p.jabatan + ')');
+      return'<option value="'+p.id+'">'+label+'</option>';
+    }).join('');
+    html += '</optgroup>';
+  }
+
+  pkSel.innerHTML = html;
+
+  if(currentPk) pkSel.value = currentPk;
   hitungDurasi();
 }
 
@@ -613,6 +705,9 @@ function goto(page) {
   else if (page === 'proyek') renderProyek();
 }
 
+// ═══════════════════════════════════════════════════════
+// NETWORK API CONNECTOR
+// ═══════════════════════════════════════════════════════
 function apiGet(params, cb) {
   if (!GS_URL) { cb({ok:false, error:'URL Cloud Database Belum Dikonfigurasi'}); return; }
   var cbName = '_kjp' + Date.now() + Math.floor(Math.random()*9999);
@@ -737,7 +832,6 @@ function renderValidasiList() {
     var jamM = extractTime(a.masuk); var jamP = extractTime(a.pulang);
     var hk = Number(a.hariKerja) || 0; var lj = Number(a.lemburJam) || 0;
 
-    // --- AUTO FIX BUG LEMBUR HISTORIS (Menampilkan data dengan benar meski DB lama = 0) ---
     if (jamM !== '-' && jamP !== '-') {
         var min = toMnt(jamM); var pin = toMnt(jamP);
         var isNightShift = pin < min; if (isNightShift) pin += 24 * 60;
@@ -974,7 +1068,6 @@ function tampilkanRekap() {
         var hk = Number(a.hariKerja) || 0;
         var lj = Number(a.lemburJam) || 0;
         
-        // --- AUTO FIX BUG HISTORIS ---
         var min = toMnt(jamM); var pin = toMnt(jamP);
         var isNightShift = pin < min; if (isNightShift) pin += 24 * 60;
         var dMnt = pin - min;
@@ -990,7 +1083,6 @@ function tampilkanRekap() {
         
         if(a.deskripsi) descArr.push(a.deskripsi);
         
-        // REVISI POSISI: HK di Kiri Atas, Lembur di Kanan Bawah
         return '<td class="split-cell filled"><div class="top-val">'+hk+'</div>'+ (lj>0 ? '<div class="bot-val">'+lj+'</div>' : '') +'</td>';
       } else {
         return '<td class="split-cell empty"></td>';
@@ -1160,23 +1252,20 @@ function resetProyek() { editIds.proyek=''; ['pr-nama','pr-lokasi'].forEach(func
 // ═══════════════════════════════════════════════════════
 // PLATFORM CONFIG INTERNALS
 // ═══════════════════════════════════════════════════════
-function simpanUrl() {
-  var url = document.getElementById('gs-url-input').value.trim(); if(!url.startsWith('http')) { showAlert('alert-settings','error','Tautan tidak valid.'); return; }
-  GS_URL = url.split('?')[0]; localStorage.setItem(LS_URL, GS_URL); showAlert('alert-settings','success','Tautan basis cloud diperbarui.');
-  document.getElementById('saved-url-info').style.display = 'block'; document.getElementById('saved-url-text').textContent = GS_URL; loadAll();
-}
 function testKoneksi() { apiGet({action:'ping'}, function(res){ if(res && res.result === 'pong') { alert('Koneksi sukses cloud terhubung!'); loadAll(); } }); }
-function hapusSimpanUrl() { localStorage.removeItem(LS_URL); GS_URL = ''; document.getElementById('saved-url-info').style.display = 'none'; setBadge('err'); }
 
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sidebar-overlay').classList.toggle('open'); }
 function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-overlay').classList.remove('open'); }
 
 window.onload = function() {
-  try { GS_URL = localStorage.getItem(LS_URL) || ''; } catch(e){}
-  if(GS_URL) {
-    document.getElementById('gs-url-input').value = GS_URL; document.getElementById('saved-url-info').style.display = 'block'; document.getElementById('saved-url-text').textContent = GS_URL;
-    loadAll(function(ok){ if(ok) checkSession(); else showLoginForm(true); });
-  } else { showLoginForm(false); document.body.classList.add('logged-in'); document.getElementById('main').style.display = 'flex'; goto('settings'); showAlert('alert-settings', 'info', 'Hubungkan URL Google Apps Script Anda untuk mengaktifkan database.'); }
+  document.getElementById('gs-url-input').value = GS_URL; document.getElementById('saved-url-info').style.display = 'block'; document.getElementById('saved-url-text').textContent = GS_URL;
+  loadAll(function(ok){
+    if(ok) checkSession(); 
+    else {
+        showLoginForm(true);
+        showAlertLogin('Gagal terhubung ke database. Cek koneksi internet.', 'error');
+    }
+  });
 };
 </script>
 </body>
