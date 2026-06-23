@@ -436,7 +436,7 @@ tr:hover td{background:#fafafa}
 // ═══════════════════════════════════════════════════════
 var LS_URL = 'kjp_gsurl';
 var LS_USER = 'kjp_logged_user';
-var GS_URL = 'https://script.google.com/macros/s/AKfycbyh9nywQZ445Hl2f1bz-rXFturRikeaBRZWr12ntSM1j2N0M-iXToLsIYlOpUr_9SBt/exec';
+var GS_URL = '';
 var CURRENT_USER = null;
 
 var DB = { proyek:[], mandor:[], pekerja:[], sm:[], absensi:[] };
@@ -1258,14 +1258,26 @@ function toggleSidebar() { document.getElementById('sidebar').classList.toggle('
 function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-overlay').classList.remove('open'); }
 
 window.onload = function() {
-  document.getElementById('gs-url-input').value = GS_URL; document.getElementById('saved-url-info').style.display = 'block'; document.getElementById('saved-url-text').textContent = GS_URL;
-  loadAll(function(ok){
-    if(ok) checkSession(); 
-    else {
-        showLoginForm(true);
-        showAlertLogin('Gagal terhubung ke database. Cek koneksi internet.', 'error');
-    }
-  });
+  try { GS_URL = localStorage.getItem(LS_URL) || ''; } catch(e){}
+  if(GS_URL) {
+    document.getElementById('gs-url-input').value = GS_URL; 
+    document.getElementById('saved-url-info').style.display = 'block'; 
+    document.getElementById('saved-url-text').textContent = GS_URL;
+    loadAll(function(ok){ 
+      if(ok) {
+         checkSession(); 
+      } else { 
+         showLoginForm(true); 
+         showAlertLogin('Gagal terhubung ke database. Jika URL berubah, silakan update di menu Konfigurasi.', 'error'); 
+      } 
+    });
+  } else { 
+    showLoginForm(false); 
+    document.body.classList.add('logged-in'); 
+    document.getElementById('main').style.display = 'flex'; 
+    goto('settings'); 
+    showAlert('alert-settings', 'info', 'Hubungkan URL Google Apps Script Anda untuk mengaktifkan database.'); 
+  }
 };
 </script>
 </body>
