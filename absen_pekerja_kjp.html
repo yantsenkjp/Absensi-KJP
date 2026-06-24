@@ -181,7 +181,7 @@ optgroup { font-weight: 700; color: #C8102E; background: #fff8f8; }
     <p>Masukkan URL Google Apps Script dari admin.<br>URL ada di aplikasi admin → menu <strong>Konfigurasi</strong>.</p>
     <div class="fg">
       <label>URL Google Apps Script</label>
-      <input type="url" id="setup-url" placeholder="https://script.google.com/macros/s/AKfycbxcMMmbrxv7CHbD3F0SaW-uaIYZ0GIm8zJLXUothZEXWPGYwPGYhsQrDybIEqClUM9T/exec"
+      <input type="url" id="setup-url" placeholder="https://script.google.com/macros/s/.../exec"
         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
     <button class="btn-simpan" id="btn-setup" style="height:48px;font-size:15px">Simpan &amp; Muat Data</button>
@@ -322,9 +322,9 @@ optgroup { font-weight: 700; color: #C8102E; background: #fff8f8; }
 <script>
 'use strict';
 
-// ── KONFIGURASI URL APPS SCRIPT (HARDCODED) ──
-var GS_URL = 'https://script.google.com/macros/s/AKfycbyh9nywQZ445Hl2f1bz-rXFturRikeaBRZWr12ntSM1j2N0M-iXToLsIYlOpUr_9SBt/exec';
-
+// ── KONFIGURASI URL APPS SCRIPT (HARDCODED BARU) ──
+var LS_URL    = 'kjp_gsurl_pk';
+var GS_URL    = 'https://script.google.com/macros/s/AKfycbxcMMmbrxv7CHbD3F0SaW-uaIYZ0GIm8zJLXUothZEXWPGYwPGYhsQrDybIEqClUM9T/exec';
 var MASTER    = {proyek:[], mandor:[], pekerja:[]};
 var RIWAYAT   = [];
 var mediaFiles= [];
@@ -398,7 +398,6 @@ function hitungHari(masuk,pulang,upah,lembur){
   if(d<=0) return {hk:0,lj:0,total:0};
   
   var hk = 0;
-  // Jika masuk lebih dari 08:00 (misal 08:05), syarat 1 HK adalah d >= 481 menit (harus pulang > 1 menit di atas 8 jam kerja)
   if (min > 480) {
       hk = d >= 481 ? 1 : (d >= 240 ? 0.5 : 0);
   } else {
@@ -414,7 +413,6 @@ function hitungHari(masuk,pulang,upah,lembur){
   
   var lj = 0;
   if (extra > 0) {
-     // Pembulatan ke atas jika lebih dari atau sama dengan 55 menit. (Contoh: 117 menit + 5 = 122 -> floor(122/60) = 2 jam).
      lj = Math.floor((extra + 5) / 60);
   }
   
@@ -554,7 +552,6 @@ function muatMaster(){
     MASTER.mandor =(res.data.mandor ||[]).map(function(r){Object.keys(r).forEach(function(k){if(r[k] instanceof Date)r[k]=normTgl(r[k]);else if(r[k]===null||r[k]===undefined)r[k]='';});return r;});
     MASTER.pekerja=(res.data.pekerja||[]).map(function(r){Object.keys(r).forEach(function(k){if(r[k] instanceof Date)r[k]=normTgl(r[k]);else if(r[k]===null||r[k]===undefined)r[k]='';});return r;});
     
-    // Simpan Data Riwayat (Absensi) langsung dari get_all untuk mempercepat loading
     RIWAYAT = normAbsensi(res.data.absensi || []);
 
     var aktif=MASTER.proyek.filter(function(p){return String(p.status).toLowerCase()==='aktif';});
@@ -580,15 +577,15 @@ function tampilkanForm(){
   
   if(lastP) { 
     setVal('f-proyek', lastP); 
-    onProyekChange(); // akan memicu populate mandor
+    onProyekChange(); 
     if(lastM) {
       setTimeout(function(){ 
          setVal('f-mandor', lastM); 
-         onMandorChange(); // akan memicu populate pekerja
+         onMandorChange(); 
          if(lastPk) {
            setTimeout(function(){
              setVal('f-pekerja', lastPk);
-             onPekerjaChange(); // akan memicu checkAbsensiState
+             onPekerjaChange(); 
            }, 50);
          }
       }, 50);
@@ -642,7 +639,6 @@ function onMandorChange(){
     return;
   }
 
-  // Cari pekerja yang punya riwayat absen dengan mandor terpilih
   var historyPekerjaIds = {};
   RIWAYAT.forEach(function(r) {
     if (String(r.mandorId) === String(mId)) {
@@ -718,7 +714,7 @@ function getJamProyek(){
     var parts = fmt.formatToParts(now); var h='00',m='00';
     parts.forEach(function(p){ if(p.type==='hour') h=p.value; if(p.type==='minute') m=p.value; });
     return h+':'+m;
-  } catch(e){ return pad(now.getHours())+':'+pad(now.getMinutes()); }
+  } catch(e){ return pad(now.getHours())+pad(now.getMinutes()); }
 }
 function getTanggalProyek(){
   var tz = proyek_tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -944,7 +940,7 @@ function hitungDurasi(){
   var el=document.getElementById('kalk');
   if(!masuk||!pulang){el.className='kalk';return;}
   
-  var hasil = hitungHari(masuk, pulang, 0, 0); // Penggunaan fungsi kalkulasi tunggal
+  var hasil = hitungHari(masuk, pulang, 0, 0); 
   var min = toMnt(masuk);
   var pin = toMnt(pulang);
   var isNightShift = pin < min;
@@ -1189,7 +1185,6 @@ function renderRiwayat(){
       var fotos = JSON.parse(a.foto || '[]');
       if(fotos.length){
          fotoHtml = '<div style="display:flex;gap:4px;margin-top:6px;padding:0 10px;">' + fotos.map(function(f){
-           // Check jika ini adalah URL Google Drive
            if(f.indexOf('https://') !== 0) f = "https://drive.google.com/uc?export=view&id=" + f;
            return '<img src="'+f+'" style="width:36px;height:36px;border-radius:4px;object-fit:cover">';
          }).join('') + '</div>';
