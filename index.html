@@ -9,15 +9,11 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:16px}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f1f2f4;color:#111;display:flex;min-height:100vh}
-
-/* ── LOGIN PAGE CONTAINER ── */
 #login-container{display:flex;position:fixed;inset:0;background:#111;align-items:center;justify-content:center;z-index:9999;padding:20px}
 .login-box{background:#fff;border-radius:16px;padding:32px;width:100%;max-width:420px;box-shadow:0 10px 25px rgba(0,0,0,0.3);text-align:center}
 .login-header{margin-bottom:24px}
 .login-header h2{font-size:18px;font-weight:800;color:#111;margin-top:10px;letter-spacing:0.5px}
 .login-header p{font-size:13px;color:#666;margin-top:4px}
-
-/* ── SIDEBAR ── */
 #sidebar{width:220px;background:#111;display:none;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:200;overflow-y:auto;transition:transform .25s}
 body.logged-in #sidebar{display:flex}
 .logo-wrap{padding:16px 14px 14px;border-bottom:1px solid #222;display:flex;align-items:center;gap:10px}
@@ -30,8 +26,6 @@ body.logged-in #sidebar{display:flex}
 .nav-icon{font-size:16px;flex-shrink:0}
 #sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199}
 #sidebar-overlay.open{display:block}
-
-/* ── MAIN ── */
 #main{margin-left:0;flex:1;display:none;flex-direction:column;min-height:100vh;min-width:0}
 body.logged-in #main{display:flex;margin-left:220px}
 #topbar{height:54px;background:#fff;border-bottom:1px solid #e5e5e5;display:flex;align-items:center;padding:0 20px;position:sticky;top:0;z-index:100;gap:10px}
@@ -43,15 +37,9 @@ body.logged-in #main{display:flex;margin-left:220px}
 .conn-err{background:#fee2e2;color:#991b1b}
 .conn-load{background:#fef3c7;color:#92400e}
 #content{padding:20px;flex:1}
-
-/* ── PAGE ── */
 .page{display:none}.page.active{display:block}
-
-/* ── CARD ── */
 .card{background:#fff;border-radius:12px;border:1px solid #e8e8e8;padding:18px;margin-bottom:14px}
 .card-title{font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
-
-/* ── STATS ── */
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}
 .stat-card{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px}
 .stat-label{font-size:11px;color:#888;font-weight:500;margin-bottom:6px}
@@ -60,8 +48,6 @@ body.logged-in #main{display:flex;margin-left:220px}
 .stat-card.gold{border-left:3px solid #F5A800}
 .stat-card.green{border-left:3px solid #22c55e}
 .stat-card.blue{border-left:3px solid #3b82f6}
-
-/* ── FORM ── */
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .fg{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
 .fg.full{grid-column:1/-1}
@@ -73,8 +59,6 @@ select{cursor:pointer}
 optgroup { font-weight: 700; color: #C8102E; background: #fff8f8; }
 input[readonly]{background:#f5f5f5;color:#888}
 .flex{display:flex} .gap-8{gap:8px} .mb-12{margin-bottom:12px} .mb-16{margin-bottom:16px} .mt-16{margin-top:16px;}
-
-/* ── BUTTONS ── */
 .btn{padding:9px 16px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;font-family:inherit;-webkit-tap-highlight-color:transparent}
 .btn-primary{background:#C8102E;color:#fff}.btn-primary:hover{background:#9e0c23}
 .btn-gold{background:#F5A800;color:#111}.btn-gold:hover{opacity:.9}
@@ -84,36 +68,27 @@ input[readonly]{background:#f5f5f5;color:#888}
 .btn-green{background:#dcfce7;color:#16a34a}.btn-green:hover{background:#bbf7d0}
 .btn-sm{padding:6px 12px;font-size:12px;border-radius:6px}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-
-/* ── BADGE ── */
 .badge{display:inline-flex;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700}
 .badge-pending{background:#fef3c7;color:#92400e}
 .badge-approved{background:#dcfce7;color:#166534}
 .badge-rejected{background:#fee2e2;color:#991b1b}
 .badge-aktif{background:#dcfce7;color:#166534}
 .badge-selesai{background:#dbeafe;color:#1d4ed8}
-
-/* ── TABLE DEFAULT ── */
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{background:#f5f5f5;padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
 td{padding:9px 12px;border-bottom:1px solid #f0f0f0;vertical-align:top}
 tr:hover td{background:#fafafa}
-
-/* ── ALERT ── */
 .alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none}
 .alert.show{display:block}
 .alert-success{background:#dcfce7;color:#166534}
 .alert-error{background:#fee2e2;color:#991b1b}
 .alert-info{background:#dbeafe;color:#1d4ed8}
-
 #pr-item-table td { border:1px solid #e8e8e8; padding:0; vertical-align:middle; }
 #pr-item-table td input { width:100%;border:none;background:transparent;font-size:12px;padding:6px 8px;outline:none;font-family:inherit;color:#111; }
 #pr-item-table td.pr-td-num { text-align:center;font-size:11px;color:#aaa;padding:6px 4px;width:36px; }
 
-/* =========================================================
-   TIMESHEET EXCEL-LIKE STYLES (KHUSUS REKAP ABSENSI)
-   ========================================================= */
+/* TIMESHEET EXCEL-LIKE STYLES */
 .ts-wrap { overflow-x: auto; background: #fff; border: 1px solid #000; margin-top: 10px; }
 .ts-table { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 10px; color: #000; }
 .ts-table th, .ts-table td { border: 1px solid #000; padding: 4px; text-align: center; vertical-align: middle; white-space: nowrap; }
@@ -129,7 +104,6 @@ tr:hover td{background:#fafafa}
 
 .print-only { display: none; }
 
-/* ── PRINT MEDIA QUERY ── */
 @media print {
   @page { size: landscape; margin: 10mm; }
   body { background: #fff !important; }
@@ -139,17 +113,14 @@ tr:hover td{background:#fafafa}
   .page { display: none !important; }
   #page-rekap { display: block !important; }
   .card { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
-  
   .print-only { display: block; }
   .ts-wrap { border: none; overflow: visible; }
   .ts-table { font-size: 9pt; }
   .ts-table th { background: #eee !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .ts-table td.empty { background: linear-gradient(to bottom right, transparent 49%, #000 50%, transparent 51%) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  
   .kop-print { width: 100%; margin-bottom: 10px; font-family: Arial, sans-serif; font-size: 11px; }
   .kop-print td { padding: 4px 8px; border: none; text-align: left; font-weight: bold; }
   .kop-print .r { text-align: right; }
-  
   .ttd-print { width: 100%; margin-top: 20px; font-family: Arial, sans-serif; font-size: 11px; text-align: center; }
   .ttd-print td { padding: 10px; border: none; vertical-align: bottom; height: 80px; }
 }
@@ -244,13 +215,13 @@ tr:hover td{background:#fafafa}
           ✅ URL tersimpan: <strong id="saved-url-text" style="font-size:11px;word-break:break-all"></strong>
         </div>
         <div class="fg mb-12"><label>URL Google Apps Script</label>
-        <input type="url" id="gs-url-input" value="https://script.google.com/macros/s/AKfycbyh9nywQZ445Hl2f1bz-rXFturRikeaBRZWr12ntSM1j2N0M-iXToLsIYlOpUr_9SBt/exec" readonly style="background:#f5f5f5; color:#666;">
-        <small style="color:#888;">URL sudah ditanamkan permanen di dalam sistem.</small>
+        <input type="url" id="gs-url-input" value="" placeholder="https://script.google.com/macros/s/.../exec">
         </div>
-        <div class="flex gap-8 mb-12"><button class="btn btn-outline" onclick="testKoneksi()">🔗 Test Koneksi</button></div>
+        <div class="flex gap-8 mb-12"><button class="btn btn-primary" onclick="simpanUrl()">💾 Simpan &amp; Hubungkan</button><button class="btn btn-outline" onclick="testKoneksi()">🔗 Test Koneksi</button></div>
       </div>
     </div>
 
+    <!-- DASHBOARD -->
     <div class="page" id="page-dashboard">
       <div class="stats-grid">
         <div class="stat-card red"><div class="stat-label">Absensi Pending</div><div class="stat-value" id="s-pending">-</div></div>
@@ -264,6 +235,7 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
+    <!-- ABSENSI MANUAL (Admin) -->
     <div class="page" id="page-absensi">
       <div class="card" style="max-width:660px">
         <div class="card-title">✏️ Input Absensi Harian</div>
@@ -282,6 +254,7 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
+    <!-- VALIDASI SM -->
     <div class="page" id="page-validasi">
       <div class="card">
         <div class="card-title">✅ Validasi Laporan Lapangan</div>
@@ -291,6 +264,7 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
+    <!-- REKAP ABSENSI PAGE (TIMESHEET MATRIX) -->
     <div class="page" id="page-rekap">
       <div class="card">
         <div class="card-title no-print">🖨️ Rekap Absensi &amp; Penggajian (Timesheet)</div>
@@ -312,6 +286,7 @@ tr:hover td{background:#fafafa}
       <div id="rekap-result"></div>
     </div>
 
+    <!-- PR LOGISTIK -->
     <div class="page" id="page-pr">
       <div class="flex gap-8 mb-12" style="justify-content:space-between">
         <button class="btn btn-primary" onclick="prBuatBaru()">➕ PR Baru</button>
@@ -339,6 +314,7 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
+    <!-- DATA MASTER -->
     <div class="page" id="page-pekerja">
       <div class="card">
         <div class="card-title">👷 Data Pekerja</div>
@@ -408,6 +384,7 @@ tr:hover td{background:#fafafa}
   </div>
 </div>
 
+<!-- MODAL EDIT ABSENSI -->
 <div id="edit-absen-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center; padding:20px;">
   <div class="card" style="width:100%; max-width:400px; margin:0;">
     <div class="card-title">✏️ Edit Jam & HK Pekerja</div>
@@ -455,7 +432,7 @@ var ROLE_PERMISSIONS = {
 var BLN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
 var HARI_S = ['M','S','S','R','K','J','S'];
 
-// ── HELPERS ──
+// ── HELPERS LOGIKA LEMBUR & HK ──
 function pad(n){ return String(n).padStart(2,'0'); }
 
 function fmtTgl(s) { 
@@ -491,6 +468,39 @@ function toMnt(t){
   var p=t.split(':');
   if(p.length < 2) return 0;
   return parseInt(p[0])*60+parseInt(p[1]);
+}
+
+function kalkulasiHariLembur(masukStr, pulangStr) {
+  var min = toMnt(masukStr);
+  var pin = toMnt(pulangStr);
+  if(!min || !pin) return { hk: 0, lj: 0 };
+  
+  var isNightShift = pin < min;
+  if (isNightShift) pin += 24 * 60;
+  
+  var d = pin - min;
+  if (d <= 0) return { hk: 0, lj: 0 };
+  
+  var hk = 0;
+  if (min > 480) {
+      hk = d >= 481 ? 1 : (d >= 240 ? 0.5 : 0);
+  } else {
+      hk = d >= 480 ? 1 : (d >= 240 ? 0.5 : 0);
+  }
+  
+  var extra = 0;
+  if (!isNightShift && pin > toMnt("16:00")) {
+     extra = pin - toMnt("16:00");
+  } else if (isNightShift || d > 480) {
+     extra = Math.max(0, d - 480);
+  }
+  
+  var lj = 0;
+  if (extra > 0) {
+     lj = Math.floor((extra + 5) / 60);
+  }
+  
+  return { hk: hk, lj: lj };
 }
 
 function rupiah(n) { return 'Rp ' + Number(n||0).toLocaleString('id-ID'); }
@@ -542,7 +552,6 @@ function onAbProyekChange() {
   onAbMandorChange();
 }
 
-// ── SMART GROUPING: FILTER PEKERJA BERDASARKAN MANDOR (KHUSUS ADMIN INPUT) ──
 function onAbMandorChange() {
   var pId = document.getElementById('ab-proyek').value;
   var mId = document.getElementById('ab-mandor').value;
@@ -556,15 +565,9 @@ function onAbMandorChange() {
   }
 
   var projectMandorIds = String(pr.mandorId || '').split(',').map(function(id){ return id.trim(); }).filter(Boolean);
+  var filteredPekerja = DB.pekerja.filter(function(p) { return p.jabatan === 'Mandor' ? projectMandorIds.includes(p.id) : true; });
 
-  var filteredPekerja = DB.pekerja.filter(function(p) { 
-    return p.jabatan === 'Mandor' ? projectMandorIds.includes(p.id) : true; 
-  });
-
-  if (filteredPekerja.length === 0) { 
-    pkSel.innerHTML = '<option value="">— Tidak ada pekerja di proyek ini —</option>'; 
-    return; 
-  }
+  if (filteredPekerja.length === 0) { pkSel.innerHTML = '<option value="">— Tidak ada pekerja di proyek ini —</option>'; return; }
 
   var namaCounts = {}; 
   filteredPekerja.forEach(function(p) { var n = p.nama.trim().toLowerCase(); namaCounts[n] = (namaCounts[n] || 0) + 1; });
@@ -576,38 +579,25 @@ function onAbMandorChange() {
         var label = p.nama + (namaCounts[p.nama.trim().toLowerCase()] > 1 ? ' (' + p.jabatan + ' - *' + (p.hp?p.hp.substr(-4):'❌HP') + ')' : ' (' + p.jabatan + ')');
         return '<option value="'+p.id+'">'+label+'</option>';
       }).join('');
-    pkSel.value = currentPk;
-    hitungDurasi();
-    return;
+    pkSel.value = currentPk; hitungDurasi(); return;
   }
 
-  // Pengelompokan cerdas berdasarkan histori
   var historyPekerjaIds = {};
-  DB.absensi.forEach(function(r) {
-    if (String(r.mandorId) === String(mId)) {
-      historyPekerjaIds[r.pekerjaId] = true;
-    }
-  });
+  DB.absensi.forEach(function(r) { if (String(r.mandorId) === String(mId)) { historyPekerjaIds[r.pekerjaId] = true; } });
 
-  var pekerjaTerkait = [];
-  var pekerjaLain = [];
+  var pekerjaTerkait = []; var pekerjaLain = [];
   var mandorObj = DB.mandor.find(function(m){ return m.id === mId; });
   var namaMandor = mandorObj ? mandorObj.nama.toLowerCase() : '';
 
   filteredPekerja.forEach(function(p) {
     var isThisMandor = (p.jabatan === 'Mandor' && p.nama.toLowerCase() === namaMandor);
-    if (historyPekerjaIds[p.id] || isThisMandor) {
-      pekerjaTerkait.push(p);
-    } else {
-      pekerjaLain.push(p);
-    }
+    if (historyPekerjaIds[p.id] || isThisMandor) { pekerjaTerkait.push(p); } else { pekerjaLain.push(p); }
   });
 
   pekerjaTerkait.sort(function(a,b){ return a.nama.localeCompare(b.nama); });
   pekerjaLain.sort(function(a,b){ return a.nama.localeCompare(b.nama); });
 
   var html = '<option value="">— Pilih Nama Pekerja —</option>';
-
   if (pekerjaTerkait.length > 0) {
     html += '<optgroup label="📌 Tim Mandor Ini (Sering Bersama)">';
     html += pekerjaTerkait.map(function(p){
@@ -616,7 +606,6 @@ function onAbMandorChange() {
     }).join('');
     html += '</optgroup>';
   }
-
   if (pekerjaLain.length > 0) {
     html += '<optgroup label="👥 Pekerja Lainnya">';
     html += pekerjaLain.map(function(p){
@@ -627,9 +616,7 @@ function onAbMandorChange() {
   }
 
   pkSel.innerHTML = html;
-
-  if(currentPk) pkSel.value = currentPk;
-  hitungDurasi();
+  if(currentPk) pkSel.value = currentPk; hitungDurasi();
 }
 
 function onRekProyekChange() {
@@ -754,7 +741,9 @@ function renderDashboard() {
       var tgl = String(a.tanggal);
       if (tgl.indexOf('T') > -1) tgl = tgl.split('T')[0];
       if (a.status === 'approved' && tgl.startsWith(currMonth)) {
-          totalPengeluaran += Number(a.total) || 0;
+          var p = DB.pekerja.find(function(x){ return x.id === a.pekerjaId; }) || {upah:0, lembur:0};
+          var hasil = kalkulasiHariLembur(extractTime(a.masuk), extractTime(a.pulang));
+          totalPengeluaran += (hasil.hk * Number(p.upah)) + (hasil.lj * Number(p.lembur));
       }
   });
   document.getElementById('s-pengeluaran').textContent = rupiah(totalPengeluaran).replace(',00','');
@@ -781,24 +770,14 @@ function initAbsensi() {
 function hitungDurasi() {
   var m = document.getElementById('ab-masuk').value; var p = document.getElementById('ab-pulang').value;
   var el = document.getElementById('ab-kalk'); if(!m || !p) return;
-  var min = toMnt(m); var pin = toMnt(p);
-  var isNightShift = pin < min; 
-  if (isNightShift) pin += 24 * 60; 
   
-  var d = pin - min;
+  var hasil = kalkulasiHariLembur(m, p);
+  var min = toMnt(m); var pin = toMnt(p); if (pin < min) pin += 24*60; var d = pin - min;
+
   if(d <= 0) { el.textContent = '⚠️ Jam tidak logis.'; return; }
   
-  var hk = d >= 480 ? 1 : (d >= 240 ? 0.5 : 0);
-  var lj = 0;
-  
-  if (!isNightShift && pin > toMnt("16:00")) {
-     lj = (pin - toMnt("16:00")) / 60;
-  } else {
-     lj = Math.max(0, (d - 480) / 60);
-  }
-
-  el.innerHTML = 'Durasi: <strong>' + Math.floor(d/60) + 'j ' + (d%60) + 'm</strong> &nbsp;·&nbsp; HK: <strong>' + hk + '</strong>' + (lj > 0 ? ' &nbsp;·&nbsp; Lembur: <strong>' + lj.toFixed(2) + 'j</strong>' : '');
-  el.dataset.hk = hk; el.dataset.lj = lj;
+  el.innerHTML = 'Durasi: <strong>' + Math.floor(d/60) + 'j ' + (d%60) + 'm</strong> &nbsp;·&nbsp; HK: <strong>' + hasil.hk + '</strong>' + (hasil.lj > 0 ? ' &nbsp;·&nbsp; Lembur: <strong>' + hasil.lj + 'j</strong>' : '');
+  el.dataset.hk = hasil.hk; el.dataset.lj = hasil.lj;
 }
 
 function simpanAbsensi() {
@@ -833,13 +812,9 @@ function renderValidasiList() {
     var hk = Number(a.hariKerja) || 0; var lj = Number(a.lemburJam) || 0;
 
     if (jamM !== '-' && jamP !== '-') {
-        var min = toMnt(jamM); var pin = toMnt(jamP);
-        var isNightShift = pin < min; if (isNightShift) pin += 24 * 60;
-        var dMnt = pin - min;
-        var expHk = dMnt >= 480 ? 1 : (dMnt >= 240 ? 0.5 : 0);
-        var expLj = (!isNightShift && pin > toMnt("16:00")) ? (pin - toMnt("16:00")) / 60 : Math.max(0, (dMnt - 480) / 60);
-        if (lj === 0 && expLj > 0) lj = parseFloat(expLj.toFixed(2));
-        if (hk === 0 && expHk > 0) hk = expHk;
+        var hasil = kalkulasiHariLembur(jamM, jamP);
+        if (lj === 0 && hasil.lj > 0) lj = hasil.lj;
+        if (hk === 0 && hasil.hk > 0) hk = hasil.hk;
     }
     
     html += '<tr><td><strong>'+p.nama+'</strong></td><td>'+pr.nama+'</td>' +
@@ -886,21 +861,10 @@ function kalkulasiEditModal() {
   var m = document.getElementById('edit-ab-masuk').value;
   var p = document.getElementById('edit-ab-pulang').value;
   if(!m || !p) return;
-  var min = toMnt(m); var pin = toMnt(p);
-  var isNightShift = pin < min;
-  if (isNightShift) pin += 24 * 60;
+  var hasil = kalkulasiHariLembur(m, p);
   
-  var d = pin - min;
-  var hk = d >= 480 ? 1 : (d >= 240 ? 0.5 : 0);
-  var lj = 0;
-  if (!isNightShift && pin > toMnt("16:00")) {
-     lj = (pin - toMnt("16:00")) / 60;
-  } else {
-     lj = Math.max(0, (d - 480) / 60);
-  }
-  
-  document.getElementById('edit-ab-hk').value = hk;
-  document.getElementById('edit-ab-lembur').value = parseFloat(lj.toFixed(2));
+  document.getElementById('edit-ab-hk').value = hasil.hk;
+  document.getElementById('edit-ab-lembur').value = hasil.lj;
 }
 
 function simpanEditAbsensi() {
@@ -1068,13 +1032,9 @@ function tampilkanRekap() {
         var hk = Number(a.hariKerja) || 0;
         var lj = Number(a.lemburJam) || 0;
         
-        var min = toMnt(jamM); var pin = toMnt(jamP);
-        var isNightShift = pin < min; if (isNightShift) pin += 24 * 60;
-        var dMnt = pin - min;
-        var expHk = dMnt >= 480 ? 1 : (dMnt >= 240 ? 0.5 : 0);
-        var expLj = (!isNightShift && pin > toMnt("16:00")) ? (pin - toMnt("16:00")) / 60 : Math.max(0, (dMnt - 480) / 60);
-        if (lj === 0 && expLj > 0) lj = parseFloat(expLj.toFixed(2));
-        if (hk === 0 && expHk > 0) hk = expHk;
+        var hasil = kalkulasiHariLembur(jamM, jamP);
+        if (lj === 0 && hasil.lj > 0) lj = hasil.lj;
+        if (hk === 0 && hasil.hk > 0) hk = hasil.hk;
 
         trSumHk += hk;
         trSumLj += lj;
@@ -1252,7 +1212,13 @@ function resetProyek() { editIds.proyek=''; ['pr-nama','pr-lokasi'].forEach(func
 // ═══════════════════════════════════════════════════════
 // PLATFORM CONFIG INTERNALS
 // ═══════════════════════════════════════════════════════
+function simpanUrl() {
+  var url = document.getElementById('gs-url-input').value.trim(); if(!url.startsWith('http')) { showAlert('alert-settings','error','Tautan tidak valid.'); return; }
+  GS_URL = url.split('?')[0]; localStorage.setItem(LS_URL, GS_URL); showAlert('alert-settings','success','Tautan basis cloud diperbarui.');
+  document.getElementById('saved-url-info').style.display = 'block'; document.getElementById('saved-url-text').textContent = GS_URL; loadAll();
+}
 function testKoneksi() { apiGet({action:'ping'}, function(res){ if(res && res.result === 'pong') { alert('Koneksi sukses cloud terhubung!'); loadAll(); } }); }
+function hapusSimpanUrl() { localStorage.removeItem(LS_URL); GS_URL = ''; document.getElementById('saved-url-info').style.display = 'none'; setBadge('err'); }
 
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sidebar-overlay').classList.toggle('open'); }
 function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-overlay').classList.remove('open'); }
@@ -1260,10 +1226,8 @@ function closeSidebar() { document.getElementById('sidebar').classList.remove('o
 window.onload = function() {
   try { GS_URL = localStorage.getItem(LS_URL) || ''; } catch(e){}
   if(GS_URL) {
-    document.getElementById('gs-url-input').value = GS_URL; 
-    document.getElementById('saved-url-info').style.display = 'block'; 
-    document.getElementById('saved-url-text').textContent = GS_URL;
-    loadAll(function(ok){ 
+    document.getElementById('gs-url-input').value = GS_URL; document.getElementById('saved-url-info').style.display = 'block'; document.getElementById('saved-url-text').textContent = GS_URL;
+    loadAll(function(ok){
       if(ok) {
          checkSession(); 
       } else { 
