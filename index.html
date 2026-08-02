@@ -178,6 +178,7 @@ tr:hover td{background:#fafafa}
   <div class="nav-item m-dash" onclick="goto('dashboard')"><span class="nav-icon">📊</span>Dashboard</div>
   <div class="nav-item m-absensi" onclick="goto('absensi')"><span class="nav-icon">✏️</span>Input Absensi</div>
   <div class="nav-item m-validasi" onclick="goto('validasi')"><span class="nav-icon">✅</span>Validasi SM</div>
+  <div class="nav-item m-laporan" onclick="goto('laporan')"><span class="nav-icon">📸</span>Laporan &amp; Foto</div>
   <div class="nav-item m-rekap" onclick="goto('rekap')"><span class="nav-icon">🖨️</span>Rekap &amp; Print</div>
   <div class="nav-item m-pr" onclick="goto('pr')"><span class="nav-icon">🛒</span>Purchase Req.</div>
   
@@ -264,6 +265,18 @@ tr:hover td{background:#fafafa}
       </div>
     </div>
 
+    <!-- LAPORAN & FOTO -->
+    <div class="page" id="page-laporan">
+      <div class="card">
+        <div class="card-title">📸 Galeri Laporan & Foto Lapangan</div>
+        <div class="form-grid mb-12">
+          <div class="fg"><label>Filter Proyek</label><select id="lap-proyek" onchange="renderLaporanList()"></select></div>
+          <div class="fg"><label>Tanggal</label><input type="date" id="lap-tanggal" onchange="renderLaporanList()"></div>
+        </div>
+        <div id="lap-galeri-list" style="margin-top:16px;"></div>
+      </div>
+    </div>
+
     <!-- REKAP ABSENSI PAGE (TIMESHEET MATRIX) -->
     <div class="page" id="page-rekap">
       <div class="card">
@@ -320,6 +333,7 @@ tr:hover td{background:#fafafa}
         <div class="card-title">👷 Data Pekerja</div>
         <div class="alert" id="alert-pekerja"></div>
         <div class="form-grid mb-12">
+          <div class="fg"><label>Group Mandor (Opsional)</label><select id="pk-mandor-sel"><option value="">-- Pekerja Bebas / Tanpa Group --</option></select></div>
           <div class="fg"><label>Nama Pekerja</label><input type="text" id="pk-nama" placeholder="Nama lengkap"></div>
           <div class="fg"><label>Jabatan</label><select id="pk-jabatan"><option>Mandor</option><option>Tukang</option><option>Semi Tukang</option><option>Helper</option></select></div>
           <div class="fg"><label>Upah Harian (Rp)</label><input type="number" id="pk-upah" placeholder="180000"></div>
@@ -420,11 +434,11 @@ var DB = { proyek:[], mandor:[], pekerja:[], sm:[], absensi:[] };
 var editIds = { pekerja:'', mandor:'', sm:'', proyek:'' };
 
 var ROLE_PERMISSIONS = {
-  administrator: ['dash', 'absensi', 'validasi', 'rekap', 'pr', 'pekerja', 'mandor', 'sm', 'proyek', 'settings'],
+  administrator: ['dash', 'absensi', 'validasi', 'laporan', 'rekap', 'pr', 'pekerja', 'mandor', 'sm', 'proyek', 'settings'],
   purchasing:    ['dash', 'pr', 'proyek'],
   finance:       ['dash', 'rekap', 'pr', 'proyek'],
-  hrd:           ['dash', 'absensi', 'rekap', 'pekerja', 'mandor'],
-  'site manager':['dash', 'absensi', 'validasi', 'rekap', 'pr', 'proyek'],
+  hrd:           ['dash', 'absensi', 'laporan', 'rekap', 'pekerja', 'mandor'],
+  'site manager':['dash', 'absensi', 'validasi', 'laporan', 'rekap', 'pr', 'proyek'],
   warehouse:     ['dash', 'pr'],
   tamu:          ['dash']
 };
@@ -517,6 +531,10 @@ function showAlert(id, type, msg) {
 function refreshAllDropdowns() {
   var prMandorSel = document.getElementById('pr-mandor-select');
   if(prMandorSel) prMandorSel.innerHTML = DB.mandor.map(function(m){ return '<option value="'+m.id+'">'+m.nama+'</option>'; }).join('');
+  
+  var pkMandorSel = document.getElementById('pk-mandor-sel');
+  if(pkMandorSel) pkMandorSel.innerHTML = '<option value="">-- Pekerja Bebas / Tanpa Group --</option>' + DB.mandor.map(function(m){ return '<option value="'+m.id+'">'+m.nama+'</option>'; }).join('');
+  
   var prSmSel = document.getElementById('pr-sm-select');
   if(prSmSel) prSmSel.innerHTML = DB.sm.map(function(s){ return '<option value="'+s.id+'">'+s.nama+'</option>'; }).join('');
   var smProyekSel = document.getElementById('sm-proyek-select');
@@ -684,6 +702,7 @@ function goto(page) {
   if (page === 'dashboard') renderDashboard();
   else if (page === 'absensi') initAbsensi();
   else if (page === 'validasi') renderValidasiList();
+  else if (page === 'laporan') initLaporan(); 
   else if (page === 'rekap') initRekap();
   else if (page === 'pr') initPR();
   else if (page === 'pekerja') renderPekerja();
@@ -801,7 +820,6 @@ function simpanAbsensi() {
   });
 }
 
-// ── UPDATE FUNGSI renderValidasiList ──
 function renderValidasiList() {
   var el = document.getElementById('val-list'); 
   var pending = DB.absensi.filter(function(a){ return a.status === 'pending'; });
@@ -828,7 +846,6 @@ function renderValidasiList() {
         if (hk === 0 && hasil.hk > 0) hk = hasil.hk;
     }
     
-    // MENGELOLA LAPORAN KERJA (RINCIAN PER JAM)
     var lapHtml = a.deskripsi || '-';
     if(a.laporanItems) {
       try {
@@ -842,7 +859,6 @@ function renderValidasiList() {
       } catch(e) {}
     }
 
-    // MENGELOLA FOTO
     var fotoHtml = '';
     if(a.foto && a.foto !== '[]') {
       try {
@@ -850,9 +866,7 @@ function renderValidasiList() {
         if(fotos.length > 0) {
           fotoHtml = '<div style="display:flex; gap:8px; margin-top:8px;">' + 
             fotos.map(function(f){
-              // Jika data berupa ID dari Apps Script, ubah ke URL Preview Google Drive
               var url = f.startsWith('http') || f.startsWith('data:image') ? f : 'https://drive.google.com/uc?export=view&id=' + f;
-              // Foto bisa di klik untuk dibuka full di tab baru
               return '<a href="'+url+'" target="_blank" title="Klik untuk memperbesar">' + 
                      '<img src="'+url+'" style="width:50px; height:50px; object-fit:cover; border-radius:6px; border:1px solid #ccc; box-shadow:0 2px 4px rgba(0,0,0,0.1); cursor:pointer transition:transform .15s" onmouseover="this.style.transform=\'scale(1.1)\'" onmouseout="this.style.transform=\'scale(1)\'">' + 
                      '</a>';
@@ -937,6 +951,72 @@ function simpanEditAbsensi() {
       alert('Gagal mengubah data absensi'); 
     }
   });
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB LAPORAN & FOTO
+// ═══════════════════════════════════════════════════════
+function initLaporan() {
+  var lapProyek = document.getElementById('lap-proyek');
+  lapProyek.innerHTML = '<option value="">Semua Proyek</option>' + DB.proyek.map(function(p){ return '<option value="'+p.id+'">'+p.nama+'</option>'; }).join('');
+  document.getElementById('lap-tanggal').value = new Date().toISOString().split('T')[0];
+  renderLaporanList();
+}
+
+function renderLaporanList() {
+  var el = document.getElementById('lap-galeri-list');
+  var fProyek = document.getElementById('lap-proyek').value;
+  var fTgl = document.getElementById('lap-tanggal').value;
+
+  var list = DB.absensi.filter(function(a){
+    var tgl = String(a.tanggal).split('T')[0];
+    if(fTgl && tgl !== fTgl) return false;
+    if(fProyek && String(a.proyekId) !== fProyek) return false;
+    if((!a.laporanItems || a.laporanItems === '[]') && (!a.foto || a.foto === '[]') && !a.deskripsi) return false;
+    return true;
+  });
+
+  if(list.length === 0) {
+    el.innerHTML = '<div class="empty-state" style="text-align:center;padding:20px;color:#888;">Tidak ada laporan kerja atau foto pada tanggal ini.</div>';
+    return;
+  }
+
+  var html = '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:14px;">';
+  list.forEach(function(a) {
+    var p = DB.pekerja.find(function(x){ return x.id === a.pekerjaId; }) || {nama:'?'};
+    var pr = DB.proyek.find(function(x){ return x.id === a.proyekId; }) || {nama:'?'};
+    var m = DB.mandor.find(function(x){ return x.id === a.mandorId; }) || {nama:'?'};
+    
+    var lapHtml = a.deskripsi || '-';
+    if(a.laporanItems) {
+      try {
+        var items = JSON.parse(a.laporanItems);
+        if(items.length > 0) lapHtml = items.map(function(l){ return '<li><strong>'+l.jamMulai+'-'+l.jamSelesai+':</strong> '+l.uraian+'</li>'; }).join('');
+      } catch(e) {}
+    }
+
+    var fotoHtml = '';
+    if(a.foto && a.foto !== '[]') {
+      try {
+        var fotos = JSON.parse(a.foto);
+        if(fotos.length > 0) {
+          fotoHtml = '<div style="display:flex; gap:8px; margin-top:10px;">' + fotos.map(function(f){
+            var url = f.startsWith('http') || f.startsWith('data:') ? f : 'https://drive.google.com/uc?export=view&id=' + f;
+            return '<a href="'+url+'" target="_blank"><img src="'+url+'" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:1px solid #ccc;"></a>';
+          }).join('') + '</div>';
+        }
+      } catch(e) {}
+    }
+
+    html += '<div style="background:#fff; border:1px solid #e0e0e0; border-radius:10px; padding:14px;">' +
+      '<div style="font-size:14px; font-weight:700; color:#111;">'+p.nama+' <span style="font-size:11px; color:#888; font-weight:400;">(Tim '+m.nama+')</span></div>' +
+      '<div style="font-size:11px; color:#1d4ed8; font-weight:600; margin-bottom:10px;">📍 '+pr.nama+'</div>' +
+      '<ul style="font-size:12px; color:#444; padding-left:14px; margin:0;">'+lapHtml+'</ul>' +
+      fotoHtml +
+    '</div>';
+  });
+  
+  el.innerHTML = html + '</div>';
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1172,25 +1252,63 @@ function prBuatBaru() { initPR(); }
 function prSimpan() { showAlert('alert-pr', 'success', 'Dokumen Purchase Requisition berhasil diamankan secara lokal.'); }
 
 function renderPekerja() {
-  var el = document.getElementById('list-pekerja'); if(!DB.pekerja.length){ el.innerHTML='<div class="empty-state" style="text-align:center;padding:20px;color:#888;">Belum ada data pekerja</div>'; return;}
-  el.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Nama</th><th>Jabatan</th><th>Upah</th><th>Aksi</th></tr></thead><tbody>' +
-    DB.pekerja.map(function(p){ return '<tr><td><strong>'+p.nama+'</strong></td><td>'+p.jabatan+'</td><td>'+rupiah(p.upah)+'</td><td><button class="btn btn-sm btn-outline" onclick="editPekerja(\''+p.id+'\')">✏️</button> <button class="btn btn-sm btn-danger" onclick="hapusPekerja(\''+p.id+'\')">🗑</button></td></tr>'; }).join('') + '</tbody></table></div>';
+  var el = document.getElementById('list-pekerja'); 
+  if(!DB.pekerja.length){ el.innerHTML='<div class="empty-state" style="text-align:center;padding:20px;color:#888;">Belum ada data pekerja</div>'; return;}
+  
+  var grouped = {};
+  DB.pekerja.forEach(function(p) {
+    var key = p.mandorId || 'tanpa_group';
+    if(!grouped[key]) grouped[key] = [];
+    grouped[key].push(p);
+  });
+
+  var html = '';
+  Object.keys(grouped).forEach(function(mId) {
+    var namaGroup = 'Pekerja Bebas (Tanpa Mandor)';
+    if(mId !== 'tanpa_group') {
+      var mn = DB.mandor.find(function(x){ return x.id === mId; });
+      if(mn) namaGroup = 'Tim Mandor: ' + mn.nama;
+    }
+
+    html += '<div style="margin-top:16px; font-weight:700; font-size:13px; color:#C8102E; padding:8px 12px; background:#fff8f8; border-radius:8px 8px 0 0; border:1px solid #e8e8e8; border-bottom:none;">📌 ' + namaGroup + '</div>';
+    html += '<div class="table-wrap" style="margin-bottom:10px; border-radius:0 0 8px 8px; border:1px solid #e8e8e8; border-top:none;"><table><thead><tr><th>Nama</th><th>Jabatan</th><th>Upah</th><th>Aksi</th></tr></thead><tbody>';
+    
+    grouped[mId].forEach(function(p) {
+      html += '<tr><td><strong>'+p.nama+'</strong></td><td>'+p.jabatan+'</td><td>'+rupiah(p.upah)+'</td><td><button class="btn btn-sm btn-outline" onclick="editPekerja(\''+p.id+'\')">✏️</button> <button class="btn btn-sm btn-danger" onclick="hapusPekerja(\''+p.id+'\')">🗑</button></td></tr>'; 
+    });
+    html += '</tbody></table></div>';
+  });
+
+  el.innerHTML = html;
 }
+
 function simpanPekerja() {
   var nama = document.getElementById('pk-nama').value.trim(); if(!nama) return alert('Nama wajib diisi!');
   var upah = Number(document.getElementById('pk-upah').value) || 0; var lembur = Number(document.getElementById('pk-lembur').value) || Math.round(upah/8);
-  var row = { id: editIds.pekerja || uid(), nama: nama, jabatan: document.getElementById('pk-jabatan').value, upah: upah, lembur: lembur, hp: document.getElementById('pk-hp').value, rekening: document.getElementById('pk-rek').value };
+  var mandorId = document.getElementById('pk-mandor-sel').value; 
+  
+  var row = { id: editIds.pekerja || uid(), mandorId: mandorId, nama: nama, jabatan: document.getElementById('pk-jabatan').value, upah: upah, lembur: lembur, hp: document.getElementById('pk-hp').value, rekening: document.getElementById('pk-rek').value };
+  
   var btn = document.getElementById('btn-pk-simpan'); btn.disabled = true;
   apiPost({action: 'upsert_pekerja', row: row}, function(res){
-    btn.disabled = false; if(res.ok) { if(editIds.pekerja){ var idx=DB.pekerja.findIndex(function(x){return x.id===editIds.pekerja;}); if(idx>=0) DB.pekerja[idx]=row; } else { DB.pekerja.push(row); } showAlert('alert-pekerja','success','Data pekerja berhasil tersimpan.'); resetPekerja(); renderPekerja(); }
+    btn.disabled = false; 
+    if(res.ok) { 
+      if(editIds.pekerja){ var idx=DB.pekerja.findIndex(function(x){return x.id===editIds.pekerja;}); if(idx>=0) DB.pekerja[idx]=row; } 
+      else { DB.pekerja.push(row); } 
+      showAlert('alert-pekerja','success','Data pekerja berhasil tersimpan.'); resetPekerja(); renderPekerja(); 
+    }
   });
 }
+
 function editPekerja(id) {
   var p = DB.pekerja.find(function(x){ return x.id === id; }); if(!p) return; editIds.pekerja = id;
+  document.getElementById('pk-mandor-sel').value = p.mandorId || '';
   document.getElementById('pk-nama').value = p.nama; document.getElementById('pk-jabatan').value = p.jabatan; document.getElementById('pk-upah').value = p.upah; document.getElementById('pk-lembur').value = p.lembur; document.getElementById('pk-hp').value = p.hp; document.getElementById('pk-rek').value = p.rekening; document.getElementById('btn-pk-simpan').textContent = '💾 Update Karyawan';
 }
+
 function hapusPekerja(id) { if(!confirm('Hapus data pekerja ini?')) return; apiPost({action:'delete_pekerja', id:id}, function(res){ if(res.ok){ DB.pekerja=DB.pekerja.filter(function(x){return x.id!==id;}); renderPekerja(); } }); }
-function resetPekerja() { editIds.pekerja=''; ['pk-nama','pk-upah','pk-lembur','pk-hp','pk-rek'].forEach(function(i){document.getElementById(i).value='';}); document.getElementById('btn-pk-simpan').textContent='💾 Simpan Pekerja'; }
+
+function resetPekerja() { editIds.pekerja=''; document.getElementById('pk-mandor-sel').value=''; ['pk-nama','pk-upah','pk-lembur','pk-hp','pk-rek'].forEach(function(i){document.getElementById(i).value='';}); document.getElementById('btn-pk-simpan').textContent='💾 Simpan Pekerja'; }
 
 function renderMandor() {
   var el = document.getElementById('list-mandor'); if(!DB.mandor.length){ el.innerHTML='<div class="empty-state" style="text-align:center;padding:20px;color:#888;">Belum ada data mandor</div>'; return;}
