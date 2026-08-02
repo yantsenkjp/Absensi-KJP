@@ -201,6 +201,9 @@ optgroup { font-weight: 700; color: #C8102E; background: #fff8f8; }
   </div>
 </div>
 
+<!-- ============================================== -->
+<!-- TAB ABSEN (Struktur HTML Diperbaiki) -->
+<!-- ============================================== -->
 <div id="tab-absen" class="hidden">
   <div class="card">
     <div style="font-size:15px;font-weight:700;margin-bottom:16px">✏️ Input Absensi Harian</div>
@@ -244,29 +247,17 @@ optgroup { font-weight: 700; color: #C8102E; background: #fff8f8; }
           <div class="cio-tz" id="cout-tz"></div>
         </div>
       </div>
-      <div style="margin-top:8px">
-        <button onclick="toggleManualJam()" class="btn-add" style="width:100%;justify-content:center;font-size:12px">
-          ✏️ Edit Jam Manual
-        </button>
-        <div id="manual-jam-wrap" style="display:none;margin-top:10px">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div class="fg" style="margin-bottom:0">
-              <label style="font-size:12px">Jam Masuk</label>
-              <input type="time" id="f-masuk" value="08:00" onchange="hitungDurasi()">
-            </div>
-            <div class="fg" style="margin-bottom:0">
-              <label style="font-size:12px">Jam Pulang</label>
-              <input type="time" id="f-pulang" value="16:00" onchange="hitungDurasi()">
-            </div>
-          </div>
-          <button class="btn-simpan" id="btn-simpan-manual" onclick="simpanJamManual()" style="height:44px;font-size:14px;margin-top:12px">💾 Update Jam Manual</button>
-        </div>
-      </div>
-    </div>
+      
+      <!-- Input jam disembunyikan agar logika sistem tetap berjalan tanpa error -->
+      <input type="hidden" id="f-masuk" value="">
+      <input type="hidden" id="f-pulang" value="">
 
+    </div> <!-- Penutup margin-bottom:10px -->
+    
     <div class="kalk" id="kalk"></div>
-  </div>
-</div>
+  </div> <!-- Penutup .card -->
+</div> <!-- Penutup #tab-absen yang sebelumnya HILANG -->
+<!-- ============================================== -->
 
 <div id="tab-foto" class="hidden">
   <div class="card">
@@ -322,7 +313,7 @@ optgroup { font-weight: 700; color: #C8102E; background: #fff8f8; }
 <script>
 'use strict';
 
-// ── KONFIGURASI URL APPS SCRIPT (HARDCODED BARU) ──
+// ── KONFIGURASI URL APPS SCRIPT ──
 var LS_URL    = 'kjp_gsurl_pk';
 var GS_URL    = 'https://script.google.com/macros/s/AKfycbxcMMmbrxv7CHbD3F0SaW-uaIYZ0GIm8zJLXUothZEXWPGYwPGYhsQrDybIEqClUM9T/exec';
 var MASTER    = {proyek:[], mandor:[], pekerja:[]};
@@ -334,7 +325,23 @@ var proyek_tz = null;
 var BLN  = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
 var HARI = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
 
-// ── HELPERS FIX (Perbaikan Fungsi Waktu & Lembur) ──
+// ── FUNGSI BARU: Mengambil draft Check In dari Local Storage ──
+function injectDraftsToRiwayat() {
+  for(var i=0; i<localStorage.length; i++) {
+    var key = localStorage.key(i);
+    if (key && key.startsWith('draft_')) {
+      try {
+        var draft = JSON.parse(localStorage.getItem(key));
+        if (draft) {
+          var exist = RIWAYAT.find(function(x){return x.id === draft.id;});
+          if(!exist) RIWAYAT.push(draft);
+        }
+      } catch(e){}
+    }
+  }
+}
+
+// ── HELPERS FIX ──
 function uid(){ return '_'+Math.random().toString(36).slice(2,10)+Date.now().toString(36); }
 function pad(n){ return String(n).padStart(2,'0'); }
 function todayStr(){
@@ -386,7 +393,6 @@ function getMinggu(ds){
   return {start:f(st), end:f(en)};
 }
 
-// ── REVISI LOGIKA HARI KERJA & LEMBUR ──
 function hitungHari(masuk,pulang,upah,lembur){
   var min=toMnt(masuk); var pin=toMnt(pulang);
   if(!min || !pin) return {hk:0,lj:0,total:0};
@@ -518,25 +524,18 @@ function init(){
   document.getElementById('hdr-date').innerHTML=
     HARI[now.getDay()]+'<br>'+now.getDate()+' '+BLN[now.getMonth()]+' '+now.getFullYear();
 
-  // Memaksa Setup Panel agar selalu tersembunyi
   document.getElementById('setup-panel').style.display = 'none';
-
   document.getElementById('btn-add-lap').addEventListener('click',tambahLap);
   document.getElementById('btn-simpan-laporan').addEventListener('click',simpanLaporan);
   document.getElementById('upload-tap').addEventListener('click',function(){document.getElementById('f-files').click();});
   document.getElementById('f-files').addEventListener('change',function(){handleFiles(this.files);});
-  
   document.getElementById('f-proyek').addEventListener('change',function(){ onProyekChange(); checkAbsensiState(); });
   document.getElementById('f-mandor').addEventListener('change',function(){ onMandorChange(); checkAbsensiState(); });
   document.getElementById('f-pekerja').addEventListener('change',function(){ onPekerjaChange(); checkAbsensiState(); });
   document.getElementById('f-tanggal').addEventListener('change',function(){ checkAbsensiState(); hitungDurasi(); renderWeek(); });
-  
-  document.getElementById('f-masuk').addEventListener('change',hitungDurasi);
-  document.getElementById('f-pulang').addEventListener('change',hitungDurasi);
   document.getElementById('hist-pk').addEventListener('change',renderRiwayat);
   document.getElementById('foto-absensi-sel').addEventListener('change',onFotoAbsensiChange);
 
-  // Auto-connect ke GS_URL & memuat Master
   muatMaster(); 
 }
 
@@ -553,6 +552,7 @@ function muatMaster(){
     MASTER.pekerja=(res.data.pekerja||[]).map(function(r){Object.keys(r).forEach(function(k){if(r[k] instanceof Date)r[k]=normTgl(r[k]);else if(r[k]===null||r[k]===undefined)r[k]='';});return r;});
     
     RIWAYAT = normAbsensi(res.data.absensi || []);
+    injectDraftsToRiwayat();
 
     var aktif=MASTER.proyek.filter(function(p){return String(p.status).toLowerCase()==='aktif';});
     setStatus('✅ Terhubung — '+MASTER.pekerja.length+' pekerja, '+aktif.length+' proyek','ok');
@@ -570,7 +570,6 @@ function tampilkanForm(){
   setVal('f-tanggal',todayStr());
   show('main-tabs');show('tab-absen');
   
-  // ── AUTO-RESTORE LAST SELECTED USER ──
   var lastP = localStorage.getItem('kjp_last_proyek');
   var lastM = localStorage.getItem('kjp_last_mandor');
   var lastPk = localStorage.getItem('kjp_last_pekerja');
@@ -616,14 +615,11 @@ function onProyekChange(){
   }
   
   onMandorChange();
-  
   document.getElementById('pk-info').className='pk-info';
   document.getElementById('wk-box').className='wk-box';
-
   if(pr&&pr.lokasi) detectTimezone(pr.lokasi);
 }
 
-// ── SMART GROUPING: FILTER PEKERJA BERDASARKAN MANDOR ──
 function onMandorChange(){
   localStorage.setItem('kjp_last_mandor', getVal('f-mandor'));
   
@@ -678,7 +674,6 @@ function onMandorChange(){
   }
 
   selPk.innerHTML = html;
-  
   if(currentPk) selPk.value = currentPk; 
 }
 
@@ -698,7 +693,6 @@ function onPekerjaChange(){
   renderWeek();
 }
 
-// ── TIMEZONE DETEKSI ──
 function detectTimezone(lokasiProyek){
   var tzMap={'bali':'Asia/Makassar','jakarta':'Asia/Jakarta','bandung':'Asia/Jakarta','surabaya':'Asia/Jakarta','medan':'Asia/Jakarta','makassar':'Asia/Makassar','manado':'Asia/Makassar','jayapura':'Asia/Jayapura','pontianak':'Asia/Jakarta','balikpapan':'Asia/Makassar','lombok':'Asia/Makassar'};
   var lokLower=(lokasiProyek||'').toLowerCase();
@@ -738,7 +732,6 @@ function updateTzLabel(){
   if(document.getElementById('cout-tz')) document.getElementById('cout-tz').textContent=lbl;
 }
 
-// ── REALTIME CHECK IN / OUT ──
 function resetCheckInOut(){
   setVal('f-masuk',''); setVal('f-pulang','');
   document.getElementById('cin-display').textContent='Belum';
@@ -778,7 +771,8 @@ function checkAbsensiState(){
       document.getElementById('cout-display').textContent = extractTime(a.pulang);
       document.getElementById('cout-display').className = 'cio-time';
       document.getElementById('card-cout').className = 'cio-card done-out';
-      document.getElementById('btn-cout').textContent = '🔄 Update Out';
+      document.getElementById('btn-cout').textContent = a.isLocal ? '🔄 Update Out' : '✓ Tersinkron';
+      document.getElementById('btn-cout').disabled = !a.isLocal;
     }
     hitungDurasi();
   }
@@ -798,11 +792,11 @@ function doCheckIn(){
   if(tgl === todayStr()) tgl = getTanggalProyek(); 
   setVal('f-masuk',jam); setVal('f-tanggal',tgl);
 
+  var localKey = 'draft_' + proyekId + '_' + pekerjaId + '_' + tgl;
+  if(localStorage.getItem(localKey)) return showAlert('alert-main','Sudah Check In di perangkat ini','err');
+  
   var a=RIWAYAT.find(function(x){return String(x.pekerjaId)===pekerjaId && x.tanggal===tgl && String(x.proyekId)===proyekId;});
   if(a && a.masuk) return showAlert('alert-main','Sudah Check In hari ini','err');
-
-  var btn=document.getElementById('btn-cin');
-  btn.disabled=true; btn.textContent='Merekam...';
 
   var pk=MASTER.pekerja.find(function(p){return String(p.id)===pekerjaId;})||{};
 
@@ -813,23 +807,16 @@ function doCheckIn(){
     upahHarian:Number(pk.upah)||0, upahLembur:Number(pk.lembur)||0, total:0,
     deskripsi:'', laporanItems:'[]', foto:'[]',
     status:'pending', catatanReject:'', approvedBy:'', approvedAt:'',
-    createdAt:new Date().toISOString()
+    createdAt:new Date().toISOString(),
+    isLocal: true 
   };
 
-  apiPost({action:'post_absensi',row:row},function(res){
-    btn.textContent='Check In';
-    if(res.ok && res.result!=='duplicate'){
-      RIWAYAT.push(normAbsensi([row])[0]);
-      checkAbsensiState();
-      showAlert('alert-main','✅ Check In berhasil direkam ke server!','ok');
-      renderWeek();
-    } else if(res.result==='duplicate'){
-      showAlert('alert-main','Sudah Check In di server!','err');
-    } else {
-      btn.disabled=false;
-      showAlert('alert-main','Gagal: '+(res.error||'Error'),'err');
-    }
-  });
+  localStorage.setItem(localKey, JSON.stringify(row));
+  RIWAYAT.push(row);
+
+  checkAbsensiState();
+  showAlert('alert-main','✅ Check In direkam di perangkat (Belum dikirim ke Admin)','ok');
+  renderWeek();
 }
 
 function doCheckOut(){
@@ -852,63 +839,38 @@ function doCheckOut(){
   a.total = hasil.total;
 
   var btn=document.getElementById('btn-cout');
-  btn.disabled=true; btn.textContent='Merekam...';
+  btn.disabled=true; btn.textContent='Menyinkronkan...';
 
-  apiPost({action:'update_absensi',row:a},function(res){
-    btn.textContent='Check Out';
-    if(res.ok){
-      checkAbsensiState();
-      showAlert('alert-main','✅ Check Out berhasil disimpan! Jangan lupa lampirkan foto di tab Laporan.','ok');
-      renderWeek();
-    }else{
-      btn.disabled=false;
-      showAlert('alert-main','Gagal Check Out: '+res.error,'err');
-    }
-  });
+  if (a.isLocal) {
+    delete a.isLocal; 
+    apiPost({action:'post_absensi',row:a},function(res){
+      btn.textContent='Check Out';
+      if(res.ok){
+        localStorage.removeItem('draft_' + proyekId + '_' + pekerjaId + '_' + tgl);
+        checkAbsensiState();
+        showAlert('alert-main','✅ Check Out dan Sinkronisasi ke server berhasil!','ok');
+        renderWeek();
+      }else{
+        a.isLocal = true; 
+        btn.disabled=false;
+        showAlert('alert-main','Gagal Sinkronisasi: '+res.error,'err');
+      }
+    });
+  } else {
+    apiPost({action:'update_absensi',row:a},function(res){
+      btn.textContent='Check Out';
+      if(res.ok){
+        checkAbsensiState();
+        showAlert('alert-main','✅ Update Check Out berhasil disimpan!','ok');
+        renderWeek();
+      }else{
+        btn.disabled=false;
+        showAlert('alert-main','Gagal Check Out: '+res.error,'err');
+      }
+    });
+  }
 }
 
-function toggleManualJam(){
-  var wrap=document.getElementById('manual-jam-wrap');
-  wrap.style.display = (wrap.style.display==='none'||!wrap.style.display) ? 'block' : 'none';
-}
-
-function simpanJamManual(){
-  var proyekId=getVal('f-proyek');
-  var pekerjaId=getVal('f-pekerja');
-  var tgl=getVal('f-tanggal');
-  var masuk=getVal('f-masuk');
-  var pulang=getVal('f-pulang');
-
-  var a=RIWAYAT.find(function(x){return String(x.pekerjaId)===pekerjaId && x.tanggal===tgl && String(x.proyekId)===proyekId;});
-  if(!a) return showAlert('alert-main','Pekerja belum Check In hari ini. Lakukan Check In dulu baru edit jam.','err');
-  if(!masuk||!pulang) return showAlert('alert-main','Isi jam masuk dan pulang!','err');
-
-  var pk=MASTER.pekerja.find(function(p){return String(p.id)===pekerjaId;})||{};
-  var hasil=hitungHari(masuk, pulang, Number(pk.upah)||0, Number(pk.lembur)||0);
-
-  a.masuk = masuk;
-  a.pulang = pulang;
-  a.hariKerja = hasil.hk;
-  a.lemburJam = hasil.lj;
-  a.total = hasil.total;
-
-  var btn=document.getElementById('btn-simpan-manual');
-  btn.disabled=true; btn.textContent='Menyimpan...';
-
-  apiPost({action:'update_absensi',row:a},function(res){
-    btn.disabled=false; btn.textContent='💾 Update Jam Manual';
-    if(res.ok){
-      checkAbsensiState();
-      showAlert('alert-main','✅ Jam manual berhasil diupdate!','ok');
-      renderWeek();
-      toggleManualJam();
-    }else{
-      showAlert('alert-main','Gagal update: '+res.error,'err');
-    }
-  });
-}
-
-// ── WEEK PREVIEW ──
 function renderWeek(){
   var pid=getVal('f-pekerja');
   var proyekId=getVal('f-proyek');
@@ -953,7 +915,6 @@ function hitungDurasi(){
   el.innerHTML='⏱ <strong>'+Math.floor(d/60)+'j '+(d%60)+'m</strong> &nbsp;·&nbsp; Hari: <strong>'+hasil.hk+'</strong>'+(hasil.lj>0?' &nbsp;·&nbsp; Lembur: <strong>'+hasil.lj+'j</strong>':'');
 }
 
-// ── TAB FOTO & LAPORAN ──
 function initFotoTab(){
   var today=todayStr();
   var todayAbs=RIWAYAT.filter(function(a){return a.tanggal===today;});
@@ -973,7 +934,6 @@ function initFotoTab(){
         var pr=MASTER.proyek.find(function(p){return String(p.id)===String(a.proyekId);})||{};
         return'<option value="'+a.id+'">'+(pk.nama||'?')+' — '+(pr.nama||'?')+' ('+extractTime(a.masuk)+'–'+extractTime(a.pulang)+')</option>';
       }).join('');
-    // Auto-select jika hanya 1
     if(todayAbs.length===1) { sel.value=todayAbs[0].id; onFotoAbsensiChange(); }
   }
 }
@@ -990,7 +950,6 @@ function onFotoAbsensiChange(){
   if(laps.length){ laps.forEach(function(l){tambahLap(l.jamMulai,l.jamSelesai,l.uraian);}); }
   else { tambahLap(extractTime(a.masuk), extractTime(a.pulang), ''); }
 
-  // Load photos if already exist
   mediaFiles = [];
   try {
     var fotos = JSON.parse(a.foto || '[]');
@@ -1043,7 +1002,6 @@ function getLapItems(){
   return items;
 }
 
-// ── COMPRESS & UPLOAD FOTO ──
 function resizeAndCompressImage(file, callback) {
   var reader = new FileReader();
   reader.onload = function(e) {
@@ -1111,20 +1069,25 @@ function simpanLaporan(){
   var fotoUrls = mediaFiles.map(function(f){ return f.dataUrl; });
   a.foto = JSON.stringify(fotoUrls);
 
-  var btn=document.getElementById('btn-simpan-laporan');
-  btn.disabled=true;btn.textContent='Menyimpan...';
+  if(a.isLocal) {
+    var localKey = 'draft_' + a.proyekId + '_' + a.pekerjaId + '_' + a.tanggal;
+    localStorage.setItem(localKey, JSON.stringify(a));
+    showAlert('alert-foto','✅ Laporan direkam di perangkat! Dikirim otomatis saat Check Out.','ok');
+  } else {
+    var btn=document.getElementById('btn-simpan-laporan');
+    btn.disabled=true;btn.textContent='Menyimpan...';
 
-  apiPost({action:'update_absensi',row:a},function(res){
-    btn.disabled=false;btn.textContent='📤 Simpan Laporan & Foto';
-    if(res.ok){
-      showAlert('alert-foto','✅ Laporan dan Foto berhasil disimpan ke server!','ok');
-    } else {
-      showAlert('alert-foto','Gagal: '+(res.error||'Error'),'err');
-    }
-  });
+    apiPost({action:'update_absensi',row:a},function(res){
+      btn.disabled=false;btn.textContent='📤 Simpan Laporan & Foto';
+      if(res.ok){
+        showAlert('alert-foto','✅ Laporan dan Foto berhasil disimpan ke server!','ok');
+      } else {
+        showAlert('alert-foto','Gagal: '+(res.error||'Error'),'err');
+      }
+    });
+  }
 }
 
-// ── SWITCH TAB ──
 function switchTab(tab){
   document.getElementById('tab-absen').classList.toggle('hidden',tab!=='absen');
   document.getElementById('tab-foto').classList.toggle('hidden',tab!=='foto');
@@ -1139,10 +1102,12 @@ function switchTab(tab){
   }
 }
 
-// ── RIWAYAT ──
 function muatRiwayatSilent(cb){
   apiGet({action:'get_all'},function(res){
-    if(res.ok) RIWAYAT=normAbsensi(res.data.absensi || []);
+    if(res.ok) {
+        RIWAYAT=normAbsensi(res.data.absensi || []);
+        injectDraftsToRiwayat();
+    }
     if(cb) cb();
   });
 }
@@ -1152,6 +1117,7 @@ function muatRiwayat(){
   apiGet({action:'get_all'},function(res){
     if(!res.ok){document.getElementById('riwayat-list').innerHTML='<div class="empty">Gagal memuat: '+res.error+'</div>';return;}
     RIWAYAT=normAbsensi(res.data.absensi || []);
+    injectDraftsToRiwayat();
     renderWeek();
     renderRiwayat();
   });
@@ -1179,7 +1145,6 @@ function renderRiwayat(){
       lapHtml='<div class="hist-lap"><div class="hist-lap-row">'+a.deskripsi+'</div></div>';
     }
     
-    // Foto
     var fotoHtml='';
     try {
       var fotos = JSON.parse(a.foto || '[]');
